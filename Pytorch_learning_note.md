@@ -83,3 +83,266 @@ embedding_layer = nn.Embedding.from_pretrained(pretrained_weights, freeze=True) 
 - `nn.Embedding` 用于将离散索引映射到连续的向量空间，是一种常用的嵌入表示方法。
 - 适用于 NLP 任务和其他类别型数据的处理。
 - 可以进行训练，也可以加载和冻结预训练嵌入权重。
+
+
+## Masked_fill
+
+`torch.masked_fill` 是 PyTorch 中的一个函数，主要用于在张量的指定位置填充一个给定的值。通常用于需要根据掩码（mask）对张量的部分元素进行赋值的场景。`masked_fill` 的典型应用包括在计算损失时忽略特定值、对无效数据进行填充、或在注意力机制中对无关部分进行屏蔽。
+
+### 函数语法
+
+```python
+tensor.masked_fill(mask, value)
+```
+
+- **tensor**：需要填充的张量。
+- **mask**：布尔掩码张量（`True` 表示需要填充的位置，`False` 表示保留原值的位置）。`mask` 的形状必须和 `tensor` 匹配。
+- **value**：填充的值，用于替换 `mask` 中 `True` 所对应的元素。
+
+### 示例 1：基本用法
+
+假设我们有一个张量 `x`，希望将某些位置的值替换为指定值：
+
+```python
+import torch
+
+# 创建张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float)
+
+# 创建掩码张量
+mask = torch.tensor([[True, False, True], [False, True, False]])
+
+# 将 mask 为 True 的位置填充为 -1
+x_filled = x.masked_fill(mask, -1)
+print(x_filled)
+```
+
+**输出**：
+
+```
+tensor([[-1.,  2., -1.],
+        [ 4., -1.,  6.]])
+```
+
+在这个例子中，`masked_fill` 函数将 `x` 中与 `mask` 对应为 `True` 的元素替换为 `-1`。
+
+### 示例 2：在序列处理中的应用
+
+在 NLP 中的注意力机制中，我们经常需要对填充部分（padding）进行屏蔽，以避免对无效数据计算注意力分数。`masked_fill` 可用于将填充位置设为负无穷，使其在 `softmax` 中被忽略。
+
+```python
+# 模拟注意力分数张量 (2, 3)
+attention_scores = torch.tensor([[0.5, 1.2, 0.3], [1.0, 0.8, 0.4]])
+
+# 创建掩码 (True 表示填充部分需要屏蔽)
+mask = torch.tensor([[False, True, False], [False, False, True]])
+
+# 将 mask 为 True 的位置填充为一个很大的负值
+masked_attention_scores = attention_scores.masked_fill(mask, float('-inf'))
+
+# 计算 softmax，忽略填充部分的影响
+attention_weights = torch.softmax(masked_attention_scores, dim=-1)
+print(attention_weights)
+```
+
+在这里，`masked_fill` 将填充位置设为 `-inf`，以便在 `softmax` 计算时这些位置的注意力权重接近 `0`。
+
+### 示例 3：在损失函数中忽略填充值
+
+当计算损失时，您可能希望忽略特定位置的值（如填充值）。`masked_fill` 可以将这些位置替换为零或其他无效值，然后在损失计算时不包括这些元素。
+
+```python
+# 计算损失时忽略特定位置
+predictions = torch.tensor([[0.2, 0.5, 0.3], [0.1, 0.7, 0.2]])
+labels = torch.tensor([[0, 1, 0], [1, 0, 1]])
+mask = torch.tensor([[True, False, True], [False, True, False]])
+
+# 忽略 mask 为 True 的损失项
+loss = torch.nn.functional.binary_cross_entropy(predictions, labels, reduction='none')
+masked_loss = loss.masked_fill(mask, 0)  # 将忽略的项设为 0
+final_loss = masked_loss.mean()
+print(final_loss)
+```
+
+### 总结
+
+`torch.masked_fill` 是一个在特定位置填充值的便捷方法，广泛应用于需要忽略或处理特定数据的任务中。常见用途包括注意力机制中的填充屏蔽、损失计算中的特定值忽略等。
+
+
+## Repeat
+
+在 PyTorch 中，`repeat` 函数用于将张量沿指定维度进行重复，从而生成一个更大的张量。与 `unsqueeze` 增加维度不同，`repeat` 复制张量的内容以扩展维度。这在需要将较小的张量扩展为较大尺寸的场景中非常有用，比如复制特定的向量或矩阵，创建批次数据等。
+
+### 函数语法
+
+```python
+tensor.repeat(*sizes)
+```
+
+- **tensor**：要重复的张量。
+- **sizes**：表示每个维度的重复次数。`sizes` 的长度应与 `tensor` 的维度一致。
+
+`repeat` 会根据指定的重复次数来扩展张量的维度，不会改变数据的数值。
+
+### 示例 1：简单重复张量
+
+假设我们有一个 1D 张量，想沿自身的维度重复几次：
+
+```python
+import torch
+
+# 创建 1D 张量
+x = torch.tensor([1, 2, 3])
+
+# 沿第一个维度重复 3 次
+x_repeated = x.repeat(3)
+print(x_repeated)  # 输出: tensor([1, 2, 3, 1, 2, 3, 1, 2, 3])
+```
+
+在这里，`repeat(3)` 将张量 `x` 重复了 3 次，扩展为长度为 9 的新张量。
+
+### 示例 2：沿多个维度重复张量
+
+可以指定每个维度的重复次数。如果原始张量有多个维度，`repeat` 会在每个维度上按照指定次数重复张量。
+
+```python
+# 创建 2D 张量
+x = torch.tensor([[1, 2], [3, 4]])
+
+# 在第 0 维重复 2 次，第 1 维重复 3 次
+x_repeated = x.repeat(2, 3)
+print(x_repeated)
+```
+
+**输出**：
+
+```
+tensor([[1, 2, 1, 2, 1, 2],
+        [3, 4, 3, 4, 3, 4],
+        [1, 2, 1, 2, 1, 2],
+        [3, 4, 3, 4, 3, 4]])
+```
+
+在这里，`repeat(2, 3)` 将 `x` 的第 0 维重复了 2 次，第 1 维重复了 3 次，使输出形状变成 `(4, 6)`。
+
+### 示例 3：扩展维度以适应重复
+
+如果原始张量的维度不够，可以使用 `unsqueeze` 增加一个维度，然后再使用 `repeat` 来扩展新维度。例如，对于一个 1D 张量，可以增加一个维度，使其重复生成一个 2D 张量。
+
+```python
+# 创建 1D 张量
+x = torch.tensor([1, 2, 3])
+
+# 使用 unsqueeze 增加一个维度
+x = x.unsqueeze(0)  # 现在 x 的形状为 (1, 3)
+
+# 在第 0 维重复 2 次，第 1 维重复 3 次
+x_repeated = x.repeat(2, 3)
+print(x_repeated)
+```
+
+**输出**：
+
+```
+tensor([[1, 2, 3, 1, 2, 3, 1, 2, 3],
+        [1, 2, 3, 1, 2, 3, 1, 2, 3]])
+```
+
+在这个例子中，我们使用 `unsqueeze` 将 `x` 转变为 `(1, 3)`，然后使用 `repeat(2, 3)` 扩展为 `(2, 9)`。
+
+### 示例 4：广播和重复
+
+`repeat` 与广播机制一起使用时特别方便。例如，假设我们有一个 `(2, 1)` 的张量，我们希望将其扩展为 `(2, 3)`，可以通过 `repeat` 来实现。
+
+```python
+x = torch.tensor([[1], [2]])
+
+# 将第 1 维重复 3 次
+x_repeated = x.repeat(1, 3)
+print(x_repeated)
+```
+
+**输出**：
+
+```
+tensor([[1, 1, 1],
+        [2, 2, 2]])
+```
+
+在这里，`repeat(1, 3)` 将 `x` 的第 1 维重复了 3 次，使得每行的元素重复 3 次。
+
+### 总结
+
+- **repeat** 用于沿指定维度扩展张量的大小。
+- 可以指定每个维度的重复次数，使得张量在不同维度上按需扩展。
+- 结合 `unsqueeze` 可以灵活调整张量的形状以适应特定任务。
+
+通过 `repeat`，可以轻松扩展张量，以适应不同的计算需求或生成批量数据。
+
+
+
+## Unsqueeze
+
+在 PyTorch 中，`torch.unsqueeze` 是一个常用函数，用于在指定位置增加一个维度。`unsqueeze` 的作用是将张量的某个位置扩展为维数为 1 的新维度，从而改变张量的形状。
+
+### 函数语法
+
+```python
+torch.unsqueeze(input, dim)
+```
+
+- **input**：输入张量。
+- **dim**：指定在哪个位置插入一个新维度。可以是正数（从左到右）或负数（从右到左），例如 `0` 表示最外层，`-1` 表示最内层。
+
+`unsqueeze` 适用于张量的形状变换，比如增加批量维度、通道维度等，常用于输入预处理、模型输入变换等场景。
+
+### 示例 1：增加批量维度
+
+假设我们有一个形状为 `(3, 4)` 的张量，需要将其增加一个批量维度，使其形状变为 `(1, 3, 4)`。
+
+```python
+import torch
+
+# 创建形状为 (3, 4) 的张量
+x = torch.tensor([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+
+# 在位置 0 增加一个维度
+x_unsqueezed = torch.unsqueeze(x, 0)
+print(x_unsqueezed.shape)  # 输出: torch.Size([1, 3, 4])
+```
+
+在这个例子中，`torch.unsqueeze` 在第 `0` 维增加了一个新维度，使得张量形状从 `(3, 4)` 变为 `(1, 3, 4)`。
+
+### 示例 2：增加通道维度
+
+在图像处理中，假设我们有一个单通道的图像，其形状为 `(height, width)`，通常需要增加一个通道维度，将其转换为 `(1, height, width)`。
+
+```python
+# 创建形状为 (28, 28) 的张量，表示单通道图像
+image = torch.randn(28, 28)
+
+# 在第 0 维增加一个通道维度
+image_with_channel = torch.unsqueeze(image, 0)
+print(image_with_channel.shape)  # 输出: torch.Size([1, 28, 28])
+```
+
+### 示例 3：使用负数索引增加维度
+
+可以使用负数来指定维度，例如 `-1` 表示在最后一维增加新维度。
+
+```python
+# 创建形状为 (5, 10) 的张量
+x = torch.randn(5, 10)
+
+# 在最后一维增加一个新维度
+x_unsqueezed = torch.unsqueeze(x, -1)
+print(x_unsqueezed.shape)  # 输出: torch.Size([5, 10, 1])
+```
+
+### 总结
+
+- `torch.unsqueeze` 用于在指定位置增加一个维度（形状为 1）。
+- 常用于数据预处理、输入输出格式调整。
+- `dim` 参数可以是正数或负数，分别表示从左或从右开始计数。
+
+通过 `unsqueeze`，可以灵活地调整张量形状，以适应不同的模型和数据处理需求。
