@@ -521,3 +521,103 @@ print(x_tril)
 - `torch.tril` 保留矩阵的下三角部分，其余元素置零。
 - `diagonal` 参数允许调整下三角的范围。
 - 支持更高维张量的批量处理，适合用于多种矩阵操作场景。
+
+
+## torch.ones_like()
+
+
+在 PyTorch 中，`torch.ones_like` 函数用于创建一个与给定张量形状相同的张量，但所有元素的值都为 `1`。这个函数常用于生成与已有张量形状一致的全 1 张量，可以用于初始化、生成遮罩等。
+
+### 函数语法
+
+```python
+torch.ones_like(input, dtype=None, layout=None, device=None, requires_grad=False)
+```
+
+- **input**：参考张量，生成的全 1 张量的形状与其一致。
+- **dtype**（可选）：指定生成张量的数据类型。如果不指定，将使用 `input` 的数据类型。
+- **layout**（可选）：指定张量布局（一般用默认的即可）。
+- **device**（可选）：指定生成张量的设备。如果不指定，将使用 `input` 的设备。
+- **requires_grad**（可选）：指定生成的张量是否需要计算梯度，默认为 `False`。
+
+### 示例 1：生成与已有张量形状相同的全 1 张量
+
+```python
+import torch
+
+# 创建一个 2x3 的张量
+x = torch.tensor([[2, 3, 4], [5, 6, 7]])
+
+# 使用 ones_like 生成一个与 x 相同形状的全 1 张量
+ones_tensor = torch.ones_like(x)
+print(ones_tensor)
+```
+
+**输出**：
+
+```
+tensor([[1, 1, 1],
+        [1, 1, 1]])
+```
+
+在这个例子中，`torch.ones_like(x)` 生成了一个与 `x` 形状相同的全 1 张量。
+
+### 示例 2：指定数据类型
+
+可以通过 `dtype` 参数指定生成张量的类型，例如将张量生成为浮点数类型：
+
+```python
+# 创建一个 2x3 的整数张量
+x = torch.tensor([[2, 3, 4], [5, 6, 7]])
+
+# 使用 ones_like 生成一个与 x 相同形状的全 1 张量，并将类型设为浮点数
+ones_tensor = torch.ones_like(x, dtype=torch.float32)
+print(ones_tensor)
+```
+
+**输出**：
+
+```
+tensor([[1., 1., 1.],
+        [1., 1., 1.]])
+```
+
+这里 `torch.ones_like` 生成了一个全 1 张量，并将数据类型设置为 `float32`。
+
+### 示例 3：指定设备（device）
+
+如果需要在特定设备（如 GPU）上创建张量，可以使用 `device` 参数：
+
+```python
+# 创建一个张量在 CPU 上
+x = torch.tensor([[2, 3, 4], [5, 6, 7]])
+
+# 使用 ones_like 在 GPU 上创建一个全 1 张量
+ones_tensor = torch.ones_like(x, device='cuda')
+print(ones_tensor.device)  # 输出: cuda:0
+```
+
+在这个例子中，生成的全 1 张量位于 GPU 上，而不是原始的 CPU 上。
+
+### 示例 4：用于遮罩操作
+
+`torch.ones_like` 常用于创建遮罩张量。例如，在一个序列处理中可以用它创建全 1 的遮罩，用于后续的运算。
+
+```python
+# 假设我们有一个 batch_size=2, seq_length=4 的张量
+mask = torch.ones_like(torch.tensor([[0, 1, 0, 1], [1, 0, 1, 0]]), dtype=torch.float32)
+print(mask)
+```
+
+**输出**：
+
+```
+tensor([[1., 1., 1., 1.],
+        [1., 1., 1., 1.]])
+```
+
+### 总结
+
+- `torch.ones_like` 用于生成与指定张量形状一致的全 1 张量。
+- 支持指定数据类型、设备和梯度需求。
+- 常用于生成遮罩、初始化参数、与已有张量形状一致的运算等。
