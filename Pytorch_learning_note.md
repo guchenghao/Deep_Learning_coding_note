@@ -707,3 +707,80 @@ print("Reshape:", x_t_reshape)
 - **view**：要求张量连续，直接改变形状而不复制数据，因此更高效。
 - **reshape**：更灵活，即使张量不连续也能成功，但可能会在后台创建新的数据副本。
 
+
+
+## torch.randint()
+
+在 PyTorch 中，`torch.randint` 函数用于生成一个指定范围内的随机整数张量。可以指定生成张量的形状以及每个元素的范围。
+
+### 函数语法
+
+```python
+torch.randint(low, high, size, *, generator=None, out=None, dtype=torch.int64, layout=torch.strided, device=None, requires_grad=False)
+```
+
+- **low**：生成随机整数的下限（包含）。
+- **high**：生成随机整数的上限（不包含）。
+- **size**：生成张量的形状。
+- **dtype**（可选）：指定数据类型，默认为 `torch.int64`。
+- **device**（可选）：指定生成张量的设备（CPU 或 GPU），默认在 CPU 上。
+- **requires_grad**（可选）：指定是否需要计算梯度，默认为 `False`。
+
+### 示例 1：生成一个 2x3 的随机整数张量
+
+```python
+import torch
+
+# 生成一个范围在 [0, 10) 之间的 2x3 张量
+x = torch.randint(0, 10, (2, 3))
+print(x)
+```
+
+**输出示例**：
+
+```
+tensor([[3, 7, 4],
+        [9, 1, 5]])
+```
+
+在这个例子中，`torch.randint(0, 10, (2, 3))` 生成了一个形状为 `(2, 3)` 的张量，值在 `[0, 10)` 范围内随机生成。
+
+### 示例 2：在 GPU 上生成随机整数张量
+
+如果需要在 GPU 上生成张量，可以使用 `device` 参数。
+
+```python
+# 生成一个 3x3 的张量，值在 [0, 5) 之间，并放置在 GPU 上
+x_gpu = torch.randint(0, 5, (3, 3), device='cuda')
+print(x_gpu)
+```
+
+这将创建一个在 GPU 上的张量，您可以在具有 CUDA 支持的环境中使用它来加速计算。
+
+### 示例 3：指定数据类型
+
+您可以使用 `dtype` 参数来指定生成张量的数据类型，例如 `torch.int32` 或 `torch.float32`。
+
+```python
+# 生成一个 int32 类型的 2x2 张量，值在 [1, 100) 之间
+x_int32 = torch.randint(1, 100, (2, 2), dtype=torch.int32)
+print(x_int32)
+```
+
+### 示例 4：生成 1D 随机整数张量
+
+如果只想生成一个 1D 张量，可以通过指定 `size` 为一个元组来控制张量的长度。
+
+```python
+# 生成一个长度为 5 的一维张量，值在 [10, 20) 之间
+x_1d = torch.randint(10, 20, (5,))
+print(x_1d)
+```
+
+### 总结
+
+- `torch.randint` 是一个生成随机整数张量的函数。
+- 可以控制生成张量的形状、范围、数据类型和设备。
+- 支持在 GPU 上生成随机整数张量以加速计算。
+
+这种函数常用于生成测试数据、随机初始化、数据增强等场景。
