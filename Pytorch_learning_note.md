@@ -346,3 +346,178 @@ print(x_unsqueezed.shape)  # 输出: torch.Size([5, 10, 1])
 - `dim` 参数可以是正数或负数，分别表示从左或从右开始计数。
 
 通过 `unsqueeze`，可以灵活地调整张量形状，以适应不同的模型和数据处理需求。
+
+
+
+
+## transpose
+
+在 PyTorch 中，`torch.transpose` 用于交换张量的两个指定维度。这在需要调整数据的维度顺序时非常有用，例如在卷积层和全连接层之间切换通道维度，或在批量维度和序列长度之间切换等。
+
+### 函数语法
+
+```python
+torch.transpose(input, dim0, dim1)
+```
+
+- **input**：要进行转置操作的张量。
+- **dim0**：要交换的第一个维度。
+- **dim1**：要交换的第二个维度。
+
+`transpose` 返回一个新的张量，将原张量的 `dim0` 和 `dim1` 维度互换，其他维度保持不变。
+
+### 示例 1：交换 2D 张量的行和列
+
+对于 2D 张量（矩阵），`transpose` 可以用于行列转换。
+
+```python
+import torch
+
+# 创建一个 2D 张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+
+# 转置操作：交换第 0 维和第 1 维
+x_transposed = torch.transpose(x, 0, 1)
+print(x_transposed)
+```
+
+**输出**：
+
+```
+tensor([[1, 4],
+        [2, 5],
+        [3, 6]])
+```
+
+在这个例子中，`transpose` 将矩阵的行和列进行了交换，将形状从 `(2, 3)` 转换为 `(3, 2)`。
+
+### 示例 2：交换 3D 张量的维度
+
+对于 3D 张量（如图像数据或序列数据），`transpose` 可以交换任意两个维度。例如，对于图像数据张量 `(batch_size, channels, height, width)`，可以交换通道和高度维度。
+
+```python
+# 创建一个 3D 张量
+x = torch.randn(2, 3, 4)  # 形状为 (2, 3, 4)
+
+# 交换第 0 维和第 1 维
+x_transposed = torch.transpose(x, 0, 1)
+print(x_transposed.shape)  # 输出: torch.Size([3, 2, 4])
+```
+
+在这个例子中，`transpose` 将张量的第 `0` 维和第 `1` 维交换，使得张量形状从 `(2, 3, 4)` 变为 `(3, 2, 4)`。
+
+### 示例 3：多维数据中的通道交换
+
+在处理图像数据时，我们常用的图像形状是 `(batch_size, channels, height, width)`。有时我们需要交换 `channels` 和 `height` 或 `width` 维度，以适应不同的网络层输入格式。
+
+```python
+# 创建一个 4D 张量，形状为 (batch_size, channels, height, width)
+x = torch.randn(1, 3, 32, 32)
+
+# 将 channels 和 height 维度互换
+x_transposed = torch.transpose(x, 1, 2)
+print(x_transposed.shape)  # 输出: torch.Size([1, 32, 3, 32])
+```
+
+在这个例子中，`transpose` 将 `channels` 和 `height` 维度进行了交换，使得张量形状从 `(1, 3, 32, 32)` 变为 `(1, 32, 3, 32)`。
+
+### 注意事项
+
+- **不可用于交换维度顺序**：`transpose` 仅交换指定的两个维度，如果要对多个维度重新排序，可以使用 `permute`。
+- **对高维数据的灵活性**：`transpose` 可以用于交换任何两个维度，适合在处理多维张量时按需调整维度。
+
+### 总结
+
+- `torch.transpose` 可以方便地在两个指定维度之间进行交换，适用于多种数据处理场景。
+- 对于更复杂的维度重排序（如交换多个维度），可以考虑使用 `torch.permute`。
+
+通过 `transpose`，可以有效调整数据的形状，以适应不同的计算需求。
+
+
+
+## tril
+
+在 PyTorch 中，`torch.tril` 函数用于生成一个矩阵的下三角部分（即矩阵的下半部分，包括主对角线）。非下三角部分的元素将被置零，这对于处理矩阵中的下三角部分或创建下三角遮罩非常有用。
+
+### 函数语法
+
+```python
+torch.tril(input, diagonal=0)
+```
+
+- **input**：输入张量，通常是一个二维矩阵（2D tensor），但也可以是更高维张量。
+- **diagonal**：指定从主对角线开始向上的偏移量。默认值为 `0`，表示从主对角线开始；`-1` 表示包含主对角线下方一行；`+1` 表示包含主对角线上方一行。
+
+`torch.tril` 返回一个与输入相同形状的张量，只保留了下三角部分，其他元素设置为零。
+
+### 示例 1：基本用法
+
+```python
+import torch
+
+# 创建一个 3x3 的张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+
+# 获取下三角部分
+x_tril = torch.tril(x)
+print(x_tril)
+```
+
+**输出**：
+
+```
+tensor([[1, 0, 0],
+        [4, 5, 0],
+        [7, 8, 9]])
+```
+
+在这个例子中，`torch.tril` 保留了张量 `x` 的下三角部分，其余部分置为 0。
+
+### 示例 2：使用 `diagonal` 参数
+
+可以通过 `diagonal` 参数调整包含的对角线位置。`diagonal=1` 会包含上方一行的元素，`diagonal=-1` 会忽略主对角线。
+
+```python
+# 创建一个 3x3 的张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+
+# diagonal=1 包含主对角线以上一行
+x_tril_1 = torch.tril(x, diagonal=1)
+print(x_tril_1)
+```
+
+**输出**：
+
+```
+tensor([[1, 2, 0],
+        [4, 5, 6],
+        [7, 8, 9]])
+```
+
+在这个例子中，`diagonal=1` 表示包含主对角线以及上方一行的元素。
+
+### 示例 3：用于更高维张量
+
+`torch.tril` 也可以应用于更高维张量，例如批量矩阵操作。
+
+```python
+# 创建一个 3x3x3 的张量
+x = torch.randn(3, 3, 3)
+
+# 获取下三角部分
+x_tril = torch.tril(x)
+print(x_tril)
+```
+
+在这个例子中，`torch.tril` 会对张量的每个 2D 矩阵分别计算下三角部分。
+
+### 常见用途
+
+- **生成下三角矩阵**：可以直接生成下三角矩阵用于特定应用。
+- **遮罩矩阵**：在一些需要遮罩的计算（如注意力机制）中，可以使用 `torch.tril` 创建遮罩，防止模型看到未来的序列数据。
+
+### 总结
+
+- `torch.tril` 保留矩阵的下三角部分，其余元素置零。
+- `diagonal` 参数允许调整下三角的范围。
+- 支持更高维张量的批量处理，适合用于多种矩阵操作场景。
