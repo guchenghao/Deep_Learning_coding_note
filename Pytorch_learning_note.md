@@ -621,3 +621,89 @@ tensor([[1., 1., 1., 1.],
 - `torch.ones_like` 用于生成与指定张量形状一致的全 1 张量。
 - 支持指定数据类型、设备和梯度需求。
 - 常用于生成遮罩、初始化参数、与已有张量形状一致的运算等。
+
+
+
+
+## torch.view() and torch.reshape()
+
+
+在 PyTorch 中，`view` 和 `reshape` 都可以用于改变张量的形状，但它们的工作原理和使用场景稍有不同。以下是这两个方法的主要区别：
+
+### 1. **基本区别**
+
+- **`view`**：尝试在不改变内存布局的情况下，直接对张量的形状进行重构。因此，`view` 需要原始张量是一个连续的内存块。如果张量不连续，则需要先调用 `.contiguous()` 方法将其转换为连续的张量，然后才能使用 `view`。
+
+- **`reshape`**：更灵活。它可以在可能的情况下返回一个新的张量，或重新安排数据的布局来适应新的形状。即使原始张量不是连续的，`reshape` 也会在内部处理这种情况（包括复制数据），以确保成功调整形状。
+
+### 2. **使用语法**
+
+```python
+# view 语法
+tensor.view(new_shape)
+
+# reshape 语法
+tensor.reshape(new_shape)
+```
+
+### 3. **是否需要连续内存**
+
+- **`view`**：只能用于 **连续内存** 的张量。若张量不连续，必须先调用 `.contiguous()`。
+
+- **`reshape`**：不要求张量是连续的，会自动处理并创建新的张量（如果需要），即使数据在内存中不连续。
+
+### 4. **效率和性能**
+
+- **`view`**：由于不改变内存布局，如果数据是连续的，`view` 更高效。
+- **`reshape`**：更灵活，但有时会复制数据以实现新的形状，这可能会比 `view` 稍慢。
+
+### 示例 1：使用 `view` 和 `reshape` 的基本情况
+
+```python
+import torch
+
+# 创建一个张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+
+# 使用 view 和 reshape 进行形状变换
+x_view = x.view(3, 2)
+x_reshape = x.reshape(3, 2)
+
+print("Original x:", x)
+print("View:", x_view)
+print("Reshape:", x_reshape)
+```
+
+在这个例子中，`view` 和 `reshape` 的结果相同，因为原始张量 `x` 是连续的。
+
+### 示例 2：当张量不连续时的区别
+
+```python
+# 通过转置创建一个不连续的张量
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])
+x_t = x.t()  # 转置操作后，张量变为不连续
+
+# 使用 view 会报错
+try:
+    x_t_view = x_t.view(3, 2)
+except RuntimeError as e:
+    print("View error:", e)
+
+# 使用 reshape 可以成功
+x_t_reshape = x_t.reshape(3, 2)
+print("Reshape:", x_t_reshape)
+```
+
+在这个例子中，`x.t()` 是转置的操作，使得 `x_t` 不再是连续的内存布局。因此，使用 `view` 会报错，而 `reshape` 能够成功完成操作。
+
+### 5. **何时使用 `view` 和 `reshape`**
+
+- **使用 `view`**：如果您确信张量是连续的并且不需要改变内存布局时，可以使用 `view`。它在连续的情况下效率较高。
+
+- **使用 `reshape`**：如果不确定张量的内存布局，或需要确保操作成功，使用 `reshape` 会更安全。
+
+### 总结
+
+- **view**：要求张量连续，直接改变形状而不复制数据，因此更高效。
+- **reshape**：更灵活，即使张量不连续也能成功，但可能会在后台创建新的数据副本。
+
