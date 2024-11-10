@@ -784,3 +784,58 @@ print(x_1d)
 - 支持在 GPU 上生成随机整数张量以加速计算。
 
 这种函数常用于生成测试数据、随机初始化、数据增强等场景。
+
+
+
+## torch.rand_like()
+
+
+`torch.randn_like` 是 PyTorch 中用于生成与给定张量形状相同的新张量，且填充服从**标准正态分布**（均值为 0，标准差为 1）的随机数。
+
+### 语法
+
+```python
+torch.randn_like(input, dtype=None, layout=None, device=None, requires_grad=False)
+```
+
+### 参数
+
+- **input**：参考的张量。新生成的张量将具有与该张量相同的形状和属性（除非指定了其他属性）。
+- **dtype**（可选）：新张量的数据类型。如果未指定，则与 `input` 的 `dtype` 相同。
+- **layout**（可选）：新张量的布局。如果未指定，则与 `input` 的 `layout` 相同。
+- **device**（可选）：新张量所在的设备（CPU/GPU）。如果未指定，则与 `input` 的 `device` 相同。
+- **requires_grad**（可选）：是否需要梯度。默认为 `False`。
+
+### 示例
+
+```python
+import torch
+
+# 创建一个形状为 (2, 3) 的张量
+input_tensor = torch.ones(2, 3)
+
+# 生成一个与 input_tensor 形状相同的张量，元素为服从标准正态分布的随机数
+random_tensor = torch.randn_like(input_tensor)
+
+print("Input Tensor:")
+print(input_tensor)
+print("\nRandom Tensor:")
+print(random_tensor)
+```
+
+### 输出示例
+
+```plaintext
+Input Tensor:
+tensor([[1., 1., 1.],
+        [1., 1., 1.]])
+
+Random Tensor:
+tensor([[ 0.1372, -0.9254,  0.3023],
+        [-1.0295,  1.3351, -0.5671]])
+```
+
+### 使用场景
+
+- **模型初始化**：生成具有特定形状的随机权重矩阵。
+- **添加噪声**：为现有张量添加随机噪声。
