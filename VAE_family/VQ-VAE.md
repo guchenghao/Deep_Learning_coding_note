@@ -98,4 +98,38 @@ class VectorQuantizer(nn.Module):
 
 
 
+### 3. 伪梯度传递技巧
 
+
+在这段代码中：
+
+```python
+quantized = inputs + (quantized - inputs).detach()
+```
+
+我们通过一个技巧使得在反向传播中，梯度能够绕过 `quantized`，直接作用于 `inputs`，从而对 `inputs` 进行更新。
+
+### 详细解读
+
+这个表达式的关键在于 `(quantized - inputs).detach()`，它使用了 `detach()` 函数，将 `(quantized - inputs)` 从计算图中分离出来。这样做的目的是让 `quantized` 和 `inputs` 的值保持一致，但在反向传播时只让梯度流向 `inputs`，而不影响 `quantized`。
+
+### 前向传播的计算
+
+1. **前向传播结果**：在前向传播时，`quantized` 的值等于 `inputs + (quantized - inputs).detach()`，由于 `.detach()` 的作用，这相当于只是让 `quantized` 等于量化后的 `quantized` 值本身。
+2. **等价表达**：在前向传播中可以将这段代码视为 `quantized = quantized`，因为 `(quantized - inputs).detach()` 不会对 `quantized` 的值产生任何改变。
+
+### 反向传播中的梯度计算
+
+在反向传播时，我们需要关注 `inputs` 的梯度如何传递。假设最终的损失函数是 `L`，我们需要求出 `L` 对 `inputs` 的偏导数，即 `∂L/∂inputs`。
+
+由于 `quantized = inputs + (quantized - inputs).detach()` 的定义方式，反向传播过程中 `quantized` 相当于直接指向 `inputs`，从而实现伪梯度传递。具体分析如下：
+
+- **梯度计算**：在反向传播过程中，`quantized` 的梯度会直接通过 `inputs` 而不受 `quantized` 量化过程的影响。
+- **偏导数等于 `∂L/∂quantized`**：因为 `(quantized - inputs).detach()` 在反向传播中阻断了梯度的流向 `quantized`，所以 `inputs` 的梯度实际等于 `L` 对 `quantized` 的偏导数，即
+  \[
+  \frac{\partial L}{\partial \text{inputs}} = \frac{\partial L}{\partial \text{quantized}}
+  \]
+
+### 总结
+
+因此，在反向传播中，由于 `detach()` 的作用，`inputs` 的偏导数 `∂L/∂inputs` 等于 `L` 对 `quantized` 的偏导数 `∂L/∂quantized`，实现了梯度从 `output` 直接传递给 `inputs` 的效果。
