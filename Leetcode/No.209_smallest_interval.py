@@ -72,3 +72,35 @@ class Solution(object):
             return 0
         else:
             return smallest_interval
+
+
+
+class Solution(object):
+    def minSubArrayLen(self, target, nums):
+        """
+        :type target: int
+        :type nums: List[int]
+        :rtype: int
+        """
+        # * 滑动窗口法：要点在于滑动窗口的终止位置j正常遍历即可，起始位置start需要动态调整
+        start = 0
+        acc = 0
+        smallest_interval = None
+
+        for j in range(len(nums)):
+            acc += nums[j]
+            
+            if acc >= target:
+                if not smallest_interval:
+                    smallest_interval = j + 1 - start
+                
+                while acc >= target and start <= j:
+                    smallest_interval = min(smallest_interval, j + 1 - start)
+                    acc -= nums[start]
+                    start += 1
+        
+
+        if not smallest_interval:
+            return 0
+        else:
+            return smallest_interval
