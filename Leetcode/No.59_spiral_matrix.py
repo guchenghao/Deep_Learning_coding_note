@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 ###
-# File: /Users/guchenghao/Deep_Learning_coding_note/Leetcode/No.704_binary_search.py
+# File: /Users/guchenghao/Deep_Learning_coding_note/Leetcode/No.59_rotation_matrix.py
 # Project: /Users/guchenghao/Deep_Learning_coding_note/Leetcode
-# Created Date: Tuesday, November 12th 2024, 4:18:08 pm
+# Created Date: Tuesday, November 12th 2024, 8:50:11 pm
 # Author: GU CHENGHAO
 # -----
 # 2024
@@ -39,29 +39,45 @@
 # ----------	---	----------------------------------------------------------
 ###
 
-
 class Solution(object):
-    def search(self, nums, target):
+    def generateMatrix(self, n):
         """
-        :type nums: List[int]
-        :type target: int
-        :rtype: int
+        :type n: int
+        :rtype: List[List[int]]
         """
-        # * 左闭右闭的区间
-        left = 0
-        right = len(nums) - 1
+        spiral_matrix = [[0 for _ in range(n)] for _ in range(n)]
+        startx = 0
+        starty = 0
+        offset = 1  # * 记录圈数
+        num = 1
 
-        while left <= right:
-            mid = (left + right) // 2
+        # * 这道题的关键之处在于循环不变量，左闭右开的区间，这样处理边界条件才不会乱
+        for offset in range(1, n // 2 + 1):
+            # * left -> right
+            for i in range(starty, n - offset):
+                spiral_matrix[startx][i] = num
+                num += 1
+            
+            # * up -> bottom
+            for i in range(startx, n - offset):
+                spiral_matrix[i][n - offset] = num
+                num += 1
 
-            if nums[mid] > target:
-                right = mid - 1
+            # * right -> left
+            for i in range(n - offset, starty, -1):
+                spiral_matrix[n - offset][i] = num
+                num += 1
             
-            elif nums[mid] < target:
-                left = mid + 1
+            # * bottom -> up
+            for i in range(n - offset, startx, -1):
+                spiral_matrix[i][starty] = num
+                num += 1
             
-            else:
-                return mid
+            startx += 1
+            starty += 1
         
+        if n % 2 != 0:
+            spiral_matrix[n // 2][n // 2] = num
+        
+        return spiral_matrix
 
-        return -1
