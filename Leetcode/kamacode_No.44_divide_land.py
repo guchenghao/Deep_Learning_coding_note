@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 ###
-# File: /Users/guchenghao/Deep_Learning_coding_note/Leetcode/kamacode_No.58_interval_sum.py
+# File: /Users/guchenghao/Deep_Learning_coding_note/Leetcode/kamacode_No.44_divide_land.py
 # Project: /Users/guchenghao/Deep_Learning_coding_note/Leetcode
-# Created Date: Wednesday, November 13th 2024, 5:20:02 pm
+# Created Date: Wednesday, November 13th 2024, 7:11:01 pm
 # Author: GU CHENGHAO
 # -----
 # 2024
@@ -40,28 +40,56 @@
 ###
 
 
-# * 利用前缀和进行求解
+
+# * 计算行和和列和
+# * 总土地价值不变
 def main():
-    length_arr = int(input())
+    data = input().split()
     
-    perfix_sum = [0] * (length_arr + 1)
-    acc = 0
+    n = int(data[0])
+    m = int(data[1])
     
-    for i in range(length_arr):
-        acc += int(input())
-        perfix_sum[i + 1] = acc
+    value_matrix = []
+    horizon_value = [0] * n
+    vertical_value = [0] * m
+    total_sum = 0 # * 总和，很重要
+    minimum_diff = float("inf")
+    
+    # * 横向
+    for i in range(n):
+        horizon = input().split()
+        value_matrix.append(horizon)
+        for value in horizon:
+            horizon_value[i] += int(value)
+        total_sum += horizon_value[i]
     
 
-    while True:
-        try:
-            nums = input().split()
-        except:
-            
-            break
+    # * 纵向
+    for i in range(m):
+        for j in range(n):
+            vertical_value[i] += int(value_matrix[j][i])
         
-        print(perfix_sum[int(nums[1]) + 1] - perfix_sum[int(nums[0])])
+    # * 横切
+    horizon_cut = 0
+    for i in range(n - 1):
+        horizon_cut += horizon_value[i]
+        
+        minimum_diff = min(minimum_diff, abs(total_sum - 2 * horizon_cut))
 
+    
+    
+    # * 纵切
+    vertical_cut = 0
+    for i in range(m - 1):
+        vertical_cut += vertical_value[i]
+        
+        minimum_diff = min(minimum_diff, abs(total_sum - 2 * vertical_cut))
 
+    
+        
+    print(minimum_diff)
+   
 
+ 
 if __name__ == '__main__':
     main()
