@@ -1068,3 +1068,137 @@ quantized = inputs + (quantized - inputs).detach()
 
 在深度学习中，`detach()` 是控制梯度流动、优化计算资源和设计复杂模型的利器。
 
+
+
+## Modulelist and Sequential
+
+在 PyTorch 中，`nn.ModuleList` 和 `nn.Sequential` 是两种常用的容器，用于构建神经网络模块的集合。虽然它们都可以包含多个子模块，但在功能和使用方式上有显著区别。
+
+---
+
+## **1. `nn.ModuleList`**
+
+`nn.ModuleList` 是一个子模块的有序列表，可以存储任意数量的子模块，并且这些子模块会被注册到模型中。它的作用类似于一个 Python 的 `list`，但会自动将其中的模块注册为 `nn.Module` 的一部分。
+
+### **特点**
+
+- **灵活性高**：你可以在前向传播中以任意方式调用这些模块。
+- **不需要顺序执行**：你可以按照需求任意选择、调用模块。
+- **支持动态调整**：可以动态地向 `ModuleList` 中添加模块。
+
+### **使用场景**
+
+- 需要在前向传播中根据条件调用不同模块。
+- 网络结构复杂，不是简单的顺序堆叠。
+
+### **示例代码**
+
+```python
+import torch.nn as nn
+
+class MyModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_layers):
+        super(MyModel, self).__init__()
+        self.layers = nn.ModuleList([nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim) for i in range(num_layers)])
+    
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)  # 可以自由调用
+        return x
+
+model = MyModel(input_dim=10, hidden_dim=20, num_layers=3)
+print(model)
+```
+
+### **注意**
+
+- `ModuleList` 不会自动定义前向传播的顺序，需要显式地定义调用逻辑。
+
+---
+
+## **2. `nn.Sequential`**
+
+`nn.Sequential` 是一个有序容器，用于按顺序堆叠多个子模块。所有的模块会按照添加的顺序依次执行，适合于简单的前向传播结构。
+
+### **特点**
+
+- **顺序执行**：前向传播时会按照模块添加的顺序依次调用。
+- **便捷**：适合简单的网络堆叠，不需要显式定义前向传播。
+- **不可动态调整**：在定义后，不能再动态修改模块。
+
+### **使用场景**
+
+- 网络结构简单，模块按顺序执行。
+- 不需要动态调用或选择模块。
+
+### **示例代码**
+
+```python
+import torch.nn as nn
+
+# 简单的顺序堆叠模型
+model = nn.Sequential(
+    nn.Linear(10, 20),
+    nn.ReLU(),
+    nn.Linear(20, 30)
+)
+
+print(model)
+
+# 前向传播
+x = torch.randn(5, 10)
+output = model(x)
+print(output.shape)
+```
+
+### **注意**
+
+- `Sequential` 中的模块会按照定义的顺序执行，无法在中途改变逻辑或插入条件判断。
+- 适合简单的网络结构。
+
+---
+
+## **主要区别**
+
+| 特性                     | `nn.ModuleList`                           | `nn.Sequential`                         |
+|--------------------------|--------------------------------------------|------------------------------------------|
+| **执行顺序**             | 手动定义，灵活                            | 按定义顺序自动执行                       |
+| **动态调整**             | 支持动态添加或删除子模块                  | 不支持动态调整                           |
+| **适用场景**             | 复杂网络结构，动态调用模块                 | 简单顺序网络                             |
+| **调用方式**             | 在 `forward` 中手动调用                   | 自动调用，无需手动定义 `forward`          |
+
+---
+
+### **结合使用的示例**
+
+有时可以将 `ModuleList` 和 `Sequential` 结合使用，利用两者的优点。例如：
+
+```python
+import torch.nn as nn
+
+class MyModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_blocks):
+        super(MyModel, self).__init__()
+        self.blocks = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim),
+                nn.ReLU()
+            ) for i in range(num_blocks)
+        ])
+    
+    def forward(self, x):
+        for block in self.blocks:
+            x = block(x)
+        return x
+
+model = MyModel(input_dim=10, hidden_dim=20, num_blocks=3)
+print(model)
+```
+
+---
+
+### 总结
+
+- 如果网络是顺序堆叠的，使用 `nn.Sequential` 简洁高效。
+- 如果需要动态添加、删除模块，或需要复杂的前向传播逻辑，使用 `nn.ModuleList`。
+两者可以结合使用，根据需求设计灵活的网络结构。
