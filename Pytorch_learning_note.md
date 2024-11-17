@@ -1197,8 +1197,772 @@ print(model)
 
 ---
 
+**代码示例**：
+
+```python
+class VAE_Encoder(nn.Sequential):
+    def __init__(self):
+        super(VAE_Encoder, self).__init__(
+            nn.Linear(784, 400),
+            nn.ReLU(),
+            nn.Linear(400, 20)
+        )
+```
+
+这是等价于：
+
+```python
+vae_encoder = nn.Sequential(
+    nn.Linear(784, 400),
+    nn.ReLU(),
+    nn.Linear(400, 20)
+)
+```
+
+---
+
+
+
+
+## Residual Block的意义
+
+
 ### 总结
 
 - 如果网络是顺序堆叠的，使用 `nn.Sequential` 简洁高效。
 - 如果需要动态添加、删除模块，或需要复杂的前向传播逻辑，使用 `nn.ModuleList`。
 两者可以结合使用，根据需求设计灵活的网络结构。
+
+
+
+
+在神经网络中堆叠 **Residual Block（残差块）** 的意义主要是解决深层网络中的 **退化问题** 和 **梯度消失问题**，并提升模型的学习能力和效率。
+
+---
+
+### 1. **什么是 Residual Block?**
+
+Residual Block 是一种特殊的网络模块，通过 **跳跃连接**（skip connection）将输入直接加到输出上。这一设计最初由 **ResNet** 提出，是深度学习中一个重要的创新。
+
+- **基本结构**：
+  对于一个输入 \( x \)，Residual Block 的输出是：
+  \[
+  y = F(x) + x
+  \]
+  其中，\( F(x) \) 是对输入 \( x \) 进行一系列非线性变换后的结果（例如卷积 + 激活函数），而 \( x \) 是跳跃连接直接传递的输入。
+
+- **跳跃连接示意图**：
+
+  ```
+  Input --> [Transformation: F(x)] --> Add --> Output
+     |__________________________________↑
+  ```
+
+---
+
+### 2. **堆叠 Residual Block 的意义**
+
+#### (1) **解决深层网络的退化问题**
+
+- 随着网络的加深，深层网络在训练时往往表现出 **退化现象**，即深层模型的训练误差反而比浅层模型高。
+- 原因：深层网络更难优化，梯度在传播过程中容易消失或爆炸。
+- Residual Block 的跳跃连接允许梯度直接从较浅层传播到较深层，从而缓解深层网络的退化问题。
+
+#### (2) **缓解梯度消失问题**
+
+- 在深层网络中，梯度消失是一个常见问题，使得前层权重的更新速度变慢，影响训练效率。
+- 跳跃连接为梯度提供了更直接的传递路径，使得反向传播中的梯度能够更顺畅地传递到前层。
+
+#### (3) **提高网络训练的效率**
+
+- Residual Block 使得网络更容易拟合恒等映射（identity mapping）。如果 \( F(x) \) 的学习效果不好，网络可以通过直接使用 \( x \) 作为近似输出，避免学习无意义的变换。
+- 这种机制让深层网络更快地收敛，并减少模型训练的难度。
+
+#### (4) **增强网络的表示能力**
+
+- Residual Block 可以看作对输入特征的增量学习（learning residuals）。堆叠多个 Residual Block 后，网络能够逐步优化和修正特征，从而学习更复杂的表示。
+
+#### (5) **允许更深的网络设计**
+
+- 在 ResNet 中，使用 Residual Block 的网络可以轻松堆叠超过 100 层，甚至达到上千层，而传统的深层网络在这么深的情况下难以训练。
+
+#### (6) **稳健性和泛化能力**
+
+- Residual Block 的跳跃连接有助于提高模型的鲁棒性，降低过拟合风险，从而提升模型的泛化能力。
+
+---
+
+### 3. **Residual Block 的典型应用场景**
+
+- **卷积神经网络（CNN）**：
+  在 ResNet 中，Residual Block 被用来构建深层卷积网络，解决计算机视觉中的问题（如图像分类、目标检测）。
+  
+- **生成对抗网络（GAN）**：
+  在 GAN 的生成器或判别器中，Residual Block 可用于提升网络的性能和稳定性。
+  
+- **时序数据处理**：
+  在 RNN 或 Transformer 中加入 Residual Block，能缓解长序列建模中的梯度问题。
+  
+- **自监督学习和表征学习**：
+  Residual Block 是许多自监督学习框架（如 SimCLR、BYOL）的核心组件之一。
+
+---
+
+### 4. **堆叠 Residual Block 的改进版本**
+
+随着 Residual Block 的发展，许多变种进一步优化其性能：
+
+- **Bottleneck Residual Block**：减少计算量（如 ResNet-50 中的 1x1 卷积瓶颈设计）。
+- **Identity Mappings**：在 ResNet 改进版中，直接对跳跃连接使用恒等映射，简化计算。
+- **DenseNet**：堆叠更密集的跳跃连接，让每一层都连接到后续的每一层。
+
+---
+
+### 5. **直观理解**
+
+Residual Block 的核心意义是：**“让深层网络的训练像浅层网络一样简单”**。
+
+通过 Residual Block，网络可以从较浅层学习基础特征，并在更深层逐步优化和细化特征表示。这种增量学习方式，不仅加速了训练，还显著提升了模型性能。
+
+
+
+
+
+## Group Normalization
+
+
+**Group Normalization (GN)** 是一种用于深度学习中的正则化技术，它是为了解决批归一化（Batch Normalization, BN）在小批量或单样本情况下的限制而提出的。以下是其计算和原理的详细解析：
+
+---
+
+### 1. **Group Normalization 的基本原理**
+
+#### 问题背景
+
+- **Batch Normalization** 的效果依赖于较大的批量大小（通常需要 \( \text{batch size} > 32 \)）。当批量较小时，BN 的统计特性会显著波动，导致模型性能下降。
+- 在某些场景中（如小批量训练、在线学习或模型部署时），很难保证批量足够大。
+
+#### 解决方案
+
+Group Normalization 按照特征通道（channels）的分组来计算归一化，而不是依赖于批量的大小。它不受批量大小的影响，因此更适合小批量训练或单样本处理。
+
+---
+
+### 2. **计算过程**
+
+给定一个输入张量 \( x \) 的维度为 \((N, C, H, W)\)，其中：
+
+- \( N \)：批量大小。
+- \( C \)：通道数。
+- \( H, W \)：特征图的高度和宽度。
+
+#### 分组方式
+
+1. 将 \( C \) 个通道划分为 \( G \) 组，每组包含 \( C/G \) 个通道（假设 \( C \) 能被 \( G \) 整除）。
+2. 每组内的通道作为一个单位计算归一化。
+
+#### 步骤
+
+对于每个分组，计算归一化操作：
+
+1. **计算均值**：
+   对第 \( i \) 个分组的所有通道内的所有空间位置，计算均值：
+   \[
+   \mu_g = \frac{1}{\text{size}(G)} \sum_{x \in G} x
+   \]
+   其中 \( \text{size}(G) = (C/G) \times H \times W \)。
+
+2. **计算标准差**：
+   对第 \( i \) 个分组的所有通道内的所有空间位置，计算标准差：
+   \[
+   \sigma_g = \sqrt{\frac{1}{\text{size}(G)} \sum_{x \in G} (x - \mu_g)^2 + \epsilon}
+   \]
+   其中 \( \epsilon \) 是一个小值，用于防止分母为零。
+
+3. **归一化**：
+   对分组内的特征进行归一化：
+   \[
+   \hat{x}_g = \frac{x - \mu_g}{\sigma_g}
+   \]
+
+4. **缩放和平移**：
+   对归一化后的值引入可学习的参数 \( \gamma \) 和 \( \beta \)：
+   \[
+   y_g = \gamma \cdot \hat{x}_g + \beta
+   \]
+
+最后，将所有分组的结果组合成输出。
+
+---
+
+### 3. **公式总结**
+
+对于每个输入 \( x \)，Group Normalization 的输出为：
+\[
+y_{nchw} = \gamma_{c} \cdot \frac{x_{nchw} - \mu_g}{\sqrt{\sigma_g^2 + \epsilon}} + \beta_{c}
+\]
+其中：
+
+- \( n \)：样本索引。
+- \( c \)：通道索引。
+- \( h, w \)：空间位置。
+- \( \mu_g \) 和 \( \sigma_g \) 是在每组 \( G \) 内计算的统计量。
+
+---
+
+### 4. **Group Normalization 的优点**
+
+#### (1) **独立于批量大小**
+
+- GN 仅依赖于通道内的分组统计，与批量大小无关，因此适合小批量训练或单样本推理。
+
+#### (2) **更稳定的统计特性**
+
+- 在同一个通道组内计算统计量，减小了空间维度内的波动性。
+
+#### (3) **灵活性**
+
+- 通过调整分组数 \( G \)：
+  - \( G = 1 \)：等价于 Layer Normalization。
+  - \( G = C \)：等价于 Instance Normalization。
+  - \( 1 < G < C \)：在 GN 和 BN 之间提供折中方案。
+
+---
+
+### 5. **与其他归一化方法的比较**
+
+| 特性                   | Batch Normalization (BN) | Layer Normalization (LN) | Instance Normalization (IN) | Group Normalization (GN) |
+|------------------------|--------------------------|---------------------------|-----------------------------|---------------------------|
+| **依赖批量大小**        | 是                      | 否                        | 否                          | 否                        |
+| **统计量计算范围**      | 跨批量                  | 跨通道                    | 单通道                      | 跨分组通道                |
+| **适用场景**            | 大批量训练              | NLP、小批量训练           | 图像风格迁移                | 图像分类、小批量训练       |
+
+---
+
+### 6. **实践注意事项**
+
+- **分组数 \( G \) 的选择**：
+  - 一般 \( G = 32 \) 是一个常见的选择，ResNet 和 Mask R-CNN 等论文中多采用此设置。
+  - 也可以根据通道数 \( C \) 和硬件计算效率选择适合的 \( G \)。
+
+- **计算开销**：
+  - GN 的计算比 BN 稍高，但仍较低，适合大多数深度学习任务。
+
+- **适用模型**：
+  - GN 通常用于图像任务（如分类、目标检测），尤其是在小批量或小数据集的场景中。
+
+---
+
+Group Normalization 的引入提供了一种灵活且高效的正则化方式，特别适合在小批量训练场景中替代 Batch Normalization。
+
+
+
+
+
+
+## 激活函数如何在深度神经网络结构中进行放置
+
+
+在深度神经网络中，**激活函数的放置**对网络的性能和收敛速度有重要影响。以下是关于激活函数放置的一些**最佳实践**和背后的**原理**。
+
+---
+
+### 1. **激活函数的基本作用**
+
+- **引入非线性**：激活函数是非线性映射的关键，使神经网络能够表示复杂的函数。
+- **限制输出范围**：某些激活函数（如 Sigmoid、Tanh）可以将输出限制在特定范围内。
+- **平衡梯度流**：避免梯度爆炸或梯度消失问题（如 ReLU 类激活函数）。
+
+---
+
+### 2. **激活函数的典型放置位置**
+
+#### **(1) 放在线性层（如全连接层或卷积层）之后**
+
+这是最常见的做法，激活函数通常放在线性变换（矩阵乘法和加偏置）之后：
+\[
+\text{Output} = \sigma(Wx + b)
+\]
+其中 \( \sigma \) 是激活函数（如 ReLU、Sigmoid 等）。
+
+- **原因**：
+  - 线性变换本身无法引入非线性。
+  - 激活函数使得网络能够学习复杂的映射关系。
+  - 保证每层输出作为下一层输入时具有非线性特性。
+
+- **实践示例**：
+  PyTorch 示例：
+
+  ```python
+  import torch.nn as nn
+  layer = nn.Sequential(
+      nn.Linear(128, 64),
+      nn.ReLU(),  # 激活函数放在线性层之后
+      nn.Linear(64, 32),
+      nn.ReLU()
+  )
+  ```
+
+---
+
+#### **(2) 不放在最后一层**
+
+通常，最后一层输出需要与特定的任务需求相匹配：
+
+- **回归任务**：
+  - 最后一层一般不使用激活函数，直接输出预测值。
+  - 示例：网络用于预测一个实数值。
+- **分类任务**：
+  - 二分类：最后一层使用 Sigmoid，将输出映射到 \([0, 1]\)，表示概率。
+  - 多分类：最后一层使用 Softmax，将输出映射到概率分布。
+
+- **原因**：
+  - 激活函数会影响输出范围，不适用于某些需要线性输出的任务。
+  - 特定任务需要特定的激活函数，如概率需要在 \([0, 1]\) 范围。
+
+- **实践示例**：
+
+  ```python
+  class Classifier(nn.Module):
+      def __init__(self):
+          super(Classifier, self).__init__()
+          self.fc1 = nn.Linear(128, 64)
+          self.fc2 = nn.Linear(64, 10)
+
+      def forward(self, x):
+          x = torch.relu(self.fc1(x))  # 隐藏层激活
+          x = torch.softmax(self.fc2(x), dim=-1)  # 输出层激活
+          return x
+  ```
+
+---
+
+#### **(3) 卷积层中的激活函数**
+
+在卷积神经网络中，激活函数通常放在 **卷积层之后，池化层之前**：
+\[
+\text{Output} = \text{Pooling}(\sigma(\text{Convolution}(x)))
+\]
+
+- **原因**：
+  - 激活函数增加非线性，提升网络的表达能力。
+  - 池化层（如 MaxPooling）仅对局部特征做降维，不需要激活函数干预。
+
+- **实践示例**：
+
+  ```python
+  import torch.nn.functional as F
+
+  class ConvNet(nn.Module):
+      def __init__(self):
+          super(ConvNet, self).__init__()
+          self.conv1 = nn.Conv2d(3, 16, kernel_size=3)
+          self.pool = nn.MaxPool2d(2, 2)
+
+      def forward(self, x):
+          x = F.relu(self.conv1(x))  # 激活函数在卷积之后
+          x = self.pool(x)          # 激活函数在池化之前
+          return x
+  ```
+
+---
+
+### 3. **避免的错误放置方式**
+
+#### **(1) 不要在所有层都使用激活函数**
+
+- 有些层（如残差连接的跳跃部分）不需要激活函数：
+  \[
+  y = F(x) + x
+  \]
+  其中 \( F(x) \) 通常有激活函数，但直接跳跃的 \( x \) 不需要激活。
+
+- **实践示例（ResNet 残差块）**：
+
+  ```python
+  class ResidualBlock(nn.Module):
+      def __init__(self, in_channels, out_channels):
+          super(ResidualBlock, self).__init__()
+          self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+          self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+          self.relu = nn.ReLU()
+
+      def forward(self, x):
+          residual = x
+          x = self.relu(self.conv1(x))  # 激活函数在每个卷积后
+          x = self.conv2(x)
+          return self.relu(x + residual)  # 最后加跳跃连接并激活
+  ```
+
+#### **(2) 避免在某些模块后重复激活**
+
+- Batch Normalization（BN）后一般不需要激活函数：
+  - BN 本身能够调整输入分布，缓解梯度消失问题，通常和激活函数配合使用，但激活函数应仅放在 BN 后，而不是之前。
+
+---
+
+### 4. **激活函数放置总结**
+
+| **位置**                    | **是否需要激活函数** | **原因**                                                   |
+|-----------------------------|---------------------|-----------------------------------------------------------|
+| **线性层或卷积层之后**       | 是                  | 增加非线性，提升表达能力                                   |
+| **池化层之前**               | 是                  | 激活后再池化效果更好                                       |
+| **残差连接的跳跃路径**       | 否                  | 保持恒等映射，避免过多非线性扰动                           |
+| **Batch Normalization 之后** | 是                  | BN 调整分布，激活函数增加非线性                            |
+| **最后一层（回归任务）**     | 否                  | 保持输出为实数范围                                         |
+| **最后一层（二分类任务）**   | 视需求决定           | Sigmoid 映射到 \([0, 1]\)                                  |
+| **最后一层（多分类任务）**   | 是                  | Softmax 映射到概率分布                                     |
+
+---
+
+### 5. **激活函数的选择**
+
+- 常用激活函数及其应用场景：
+  - **ReLU**：隐层首选，简单高效，解决梯度消失问题。
+  - **Leaky ReLU** / **Parametric ReLU**：适合避免 ReLU 的“神经元死亡”问题。
+  - **Sigmoid**：适合二分类输出，隐藏层不推荐（梯度消失）。
+  - **Tanh**：适合输出范围在 \([-1, 1]\) 的场景。
+  - **Softmax**：适合多分类输出层。
+
+通过合理放置和选择激活函数，可以显著提升模型性能和收敛效率。
+
+
+
+
+## torch.chunk()
+
+
+在 PyTorch 中，`torch.chunk` 是一个用于将张量沿指定维度分割成多个子张量的函数。这个功能在需要分割数据进行并行计算或批量处理时非常有用。
+
+---
+
+### 1. **`torch.chunk` 函数定义**
+
+```python
+torch.chunk(input, chunks, dim=0)
+```
+
+- **参数**：
+  - `input`：要分割的输入张量。
+  - `chunks`：分割的块数。
+  - `dim`：沿着哪个维度进行分割，默认是第 0 维。
+
+- **返回值**：
+  返回一个包含子张量的元组，每个子张量是原始张量的一部分。如果张量不能被均匀分割，则最后一个块可能会更小。
+
+---
+
+### 2. **基本用法**
+
+#### (1) **均匀分割**
+
+如果张量的大小可以被 `chunks` 整除，分割的子张量大小相等。
+
+```python
+import torch
+
+# 创建一个张量
+x = torch.tensor([1, 2, 3, 4, 5, 6])
+# 分割成 3 个块
+chunks = torch.chunk(x, chunks=3, dim=0)
+
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i}: {chunk}")
+```
+
+**输出**：
+
+```
+Chunk 0: tensor([1, 2])
+Chunk 1: tensor([3, 4])
+Chunk 2: tensor([5, 6])
+```
+
+---
+
+#### (2) **不能均匀分割**
+
+当张量不能被均匀分割时，`torch.chunk` 会让最后一个块稍小。
+
+```python
+x = torch.tensor([1, 2, 3, 4, 5])
+chunks = torch.chunk(x, chunks=3, dim=0)
+
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i}: {chunk}")
+```
+
+**输出**：
+
+```
+Chunk 0: tensor([1, 2])
+Chunk 1: tensor([3, 4])
+Chunk 2: tensor([5])
+```
+
+---
+
+#### (3) **多维张量分割**
+
+`torch.chunk` 也可以用于多维张量，指定 `dim` 表示分割的维度。
+
+```python
+x = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+chunks = torch.chunk(x, chunks=3, dim=1)  # 按列分割
+
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i}:\n{chunk}")
+```
+
+**输出**：
+
+```
+Chunk 0:
+tensor([[1],
+        [4],
+        [7]])
+Chunk 1:
+tensor([[2],
+        [5],
+        [8]])
+Chunk 2:
+tensor([[3],
+        [6],
+        [9]])
+```
+
+---
+
+### 3. **与 `torch.split` 的对比**
+
+#### **相同点**
+
+- 两者都可以分割张量。
+- 支持多维张量分割。
+
+#### **不同点**
+
+| 特性              | `torch.chunk`                     | `torch.split`                         |
+|-------------------|-----------------------------------|---------------------------------------|
+| **分割方式**      | 按块数（`chunks`）分割            | 按每块大小（`split_size`）分割         |
+| **块大小**        | 块大小根据总大小和块数自动计算     | 块大小由用户指定                      |
+| **适用场景**      | 知道要分割的块数                  | 知道每块的大小                        |
+
+##### 示例
+
+```python
+# 使用 torch.chunk 按 3 块分割
+x = torch.tensor([1, 2, 3, 4, 5])
+chunks = torch.chunk(x, chunks=3, dim=0)
+
+# 使用 torch.split 按每块大小分割
+splits = torch.split(x, split_size_or_sections=[2, 2, 1], dim=0)
+
+print("Chunks:")
+for chunk in chunks:
+    print(chunk)
+
+print("Splits:")
+for split in splits:
+    print(split)
+```
+
+**输出**：
+
+```
+Chunks:
+tensor([1, 2])
+tensor([3, 4])
+tensor([5])
+
+Splits:
+tensor([1, 2])
+tensor([3, 4])
+tensor([5])
+```
+
+---
+
+### 4. **实用场景**
+
+#### (1) **数据分割并行计算**
+
+在分布式或并行计算中，将张量分割成多个块，每个块分配给不同的设备或线程。
+
+#### (2) **模型分块计算**
+
+在某些模型中，将输入分成多个部分（如序列数据的分段处理）。
+
+#### (3) **批处理**
+
+在小批量训练中，将大张量按指定大小分割以模拟小批量处理。
+
+---
+
+通过合理使用 `torch.chunk`，可以轻松实现张量的动态分割，从而简化数据处理和分布式计算的实现。
+
+
+
+
+
+
+
+## torch.clamp()
+
+
+在 PyTorch 中，`torch.clamp` 是一个用于限制张量中元素值范围的函数。通过设置最小值和最大值，可以将张量的元素截断到指定范围。
+
+---
+
+### **1. `torch.clamp` 函数定义**
+
+```python
+torch.clamp(input, min=None, max=None)
+```
+
+- **参数**：
+  - `input`：输入的张量。
+  - `min`：张量中元素的最小值。如果元素小于 `min`，则将其设为 `min`。
+  - `max`：张量中元素的最大值。如果元素大于 `max`，则将其设为 `max`。
+  - `min` 和 `max` 至少需要设置一个。
+
+- **返回值**：
+  返回一个新的张量，其中每个元素都被限制在 \([ \text{min}, \text{max} ]\) 范围内。
+
+---
+
+### **2. 用法示例**
+
+#### (1) **限制上下界**
+
+```python
+import torch
+
+x = torch.tensor([0.5, -1.0, 2.0, 3.5])
+clamped = torch.clamp(x, min=0.0, max=2.0)
+
+print("Original:", x)
+print("Clamped:", clamped)
+```
+
+**输出**：
+
+```
+Original: tensor([ 0.5000, -1.0000,  2.0000,  3.5000])
+Clamped: tensor([0.5000, 0.0000, 2.0000, 2.0000])
+```
+
+- 元素小于 `min=0.0` 的部分变为 `0.0`。
+- 元素大于 `max=2.0` 的部分变为 `2.0`。
+
+---
+
+#### (2) **仅限制最小值**
+
+```python
+x = torch.tensor([0.5, -1.0, 2.0, 3.5])
+clamped = torch.clamp(x, min=0.0)
+
+print("Clamped (min):", clamped)
+```
+
+**输出**：
+
+```
+Clamped (min): tensor([0.5000, 0.0000, 2.0000, 3.5000])
+```
+
+- 元素小于 `0.0` 的部分被限制为 `0.0`，其他元素保持不变。
+
+---
+
+#### (3) **仅限制最大值**
+
+```python
+x = torch.tensor([0.5, -1.0, 2.0, 3.5])
+clamped = torch.clamp(x, max=2.0)
+
+print("Clamped (max):", clamped)
+```
+
+**输出**：
+
+```
+Clamped (max): tensor([ 0.5000, -1.0000,  2.0000,  2.0000])
+```
+
+- 元素大于 `2.0` 的部分被限制为 `2.0`，其他元素保持不变。
+
+---
+
+#### (4) **处理多维张量**
+
+```python
+x = torch.tensor([[1.0, 3.0], [-2.0, 0.5]])
+clamped = torch.clamp(x, min=0.0, max=1.0)
+
+print("Clamped Tensor:")
+print(clamped)
+```
+
+**输出**：
+
+```
+Clamped Tensor:
+tensor([[1.0000, 1.0000],
+        [0.0000, 0.5000]])
+```
+
+---
+
+### **3. 应用场景**
+
+#### (1) **避免数值溢出**
+
+在一些计算中（例如对数或指数运算），可能出现溢出问题，可以使用 `torch.clamp` 将数值范围限制在合理区间内。
+
+```python
+x = torch.tensor([-1.0, 0.5, 10.0])
+safe_x = torch.clamp(x, min=1e-6)  # 避免 log(0) 错误
+log_x = torch.log(safe_x)
+```
+
+---
+
+#### (2) **正则化**
+
+将激活值或参数值约束在某个范围内，以防止模型训练中出现极端值。
+
+---
+
+#### (3) **图像处理**
+
+对于图像数据，可以将像素值限制在合法范围（例如 [0, 255] 或 [0, 1]）。
+
+```python
+image = torch.tensor([[-10, 50], [300, 100]])
+clamped_image = torch.clamp(image, min=0, max=255)
+```
+
+---
+
+### **4. 等效操作**
+
+`torch.clamp` 等效于以下逻辑：
+
+```python
+x = torch.tensor([0.5, -1.0, 2.0, 3.5])
+min_val, max_val = 0.0, 2.0
+
+clamped = torch.max(torch.min(x, torch.tensor(max_val)), torch.tensor(min_val))
+```
+
+---
+
+### **5. 总结**
+
+`torch.clamp` 是一个非常实用的函数，用于限制张量值的范围，其主要特点包括：
+
+- 简洁、直观的语法。
+- 在数值稳定性和正则化中广泛应用。
+- 支持多维张量和灵活的上下限设置。
