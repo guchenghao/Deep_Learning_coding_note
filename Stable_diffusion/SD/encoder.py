@@ -133,11 +133,12 @@ class VAE_Encoder(nn.Sequential):
         stdev = torch.exp(0.5 * log_var)
         
         # * z = mean + stdev * eps, eps <- N(0 ,I)
+        # * (batch, 4, height / 8, width / 8)
         x = mean + stdev * noise
         
         
         # * Sacle the output by a constant
         x *= 0.18215
         
-         
+        # * (batch, 4, height / 8, width / 8)
         return x

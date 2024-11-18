@@ -1966,3 +1966,70 @@ clamped = torch.max(torch.min(x, torch.tensor(max_val)), torch.tensor(min_val))
 - 简洁、直观的语法。
 - 在数值稳定性和正则化中广泛应用。
 - 支持多维张量和灵活的上下限设置。
+
+
+
+
+## nn.Identity
+
+`torch.nn.Identity` 是 PyTorch 中的一个模块，用于定义一个“空操作” (noop operation)。当你需要一个不对输入数据做任何修改的模块时，可以使用它。它在网络设计中主要用作占位符，便于保持代码的一致性或灵活性。
+
+### 使用场景
+
+1. **占位符**：在动态构建模型时，可以用它代替尚未设计好的部分，或为了在代码逻辑上保留特定的层。
+2. **条件模型**：当某些条件下需要跳过某些层或操作时，可以使用 `Identity` 模块。
+3. **保留输入输出接口**：即使层没有任何操作，依然可以保证代码的模块化结构，便于后期修改。
+
+### 用法
+
+```python
+import torch
+import torch.nn as nn
+
+# 定义一个模型
+class MyModel(nn.Module):
+    def __init__(self, use_identity=False):
+        super(MyModel, self).__init__()
+        self.layer1 = nn.Linear(10, 5)
+        # 根据条件选择是否应用 nn.Identity
+        self.layer2 = nn.Identity() if use_identity else nn.ReLU()
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        return x
+
+# 测试
+model = MyModel(use_identity=True)
+x = torch.randn(1, 10)
+output = model(x)
+print(output)
+```
+
+在上面的例子中，当 `use_identity=True` 时，`layer2` 将不对数据进行任何操作。否则，`layer2` 会应用 ReLU 激活函数。
+
+### `nn.Identity` 的实现
+
+`nn.Identity` 的实现非常简单：
+
+```python
+class Identity(nn.Module):
+    def forward(self, input):
+        return input
+```
+
+### 特性
+
+- 不修改输入，直接返回原始输入。
+- 不引入任何参数或计算量。
+- 常用于代码结构保持清晰，或者为了后续可能的扩展。
+
+### 典型场景
+
+1. **跳过特定层**：例如，在研究网络剪枝、模块替换等实验中。
+2. **动态网络**：根据条件决定某部分网络是否生效。
+3. **占位符**：例如在 Transformer 中可以作为一个默认的非必要层。
+
+### 总结
+
+`nn.Identity` 是一个功能简单但非常实用的模块，可以在复杂的模型设计中提高代码的灵活性和可读性。
