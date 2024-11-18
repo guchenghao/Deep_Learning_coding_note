@@ -8,6 +8,7 @@ class VAE_ResidualBlock(nn.Module):
     """Some Information about VAE_ResidualBlock"""
     # * 这个模块是由归一化层和卷积层组成的, 不改变size，依据输出的参数来改变卷积层filter的数量
     # * 在ResNet中很常用且常见的模块
+    # * 只需要两个输入的参数: (in_channels, out_channels)
     def __init__(self, in_channels, out_channels):
         super().__init__()
         
