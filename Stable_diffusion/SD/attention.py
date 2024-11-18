@@ -40,7 +40,7 @@ class SelfAttention(nn.Module):
         
         
         if attention_mask:
-            # * 返回上三角矩阵，由于是triu(1)，所以下三角和对角线均为0，上三角全为1
+            # * 返回上三角矩阵，由于是triu(1)，所以下三角和对角线均为0，上三角全为1，功能与tril()函数相反
             attention_mask = torch.ones_like(attention_matrix).triu(1)
             
             attention_matrix = attention_matrix.masked_fill(attention_mask == 0, float("-inf"))
