@@ -138,6 +138,7 @@ class VAE_Encoder(nn.Sequential):
         
         
         # * Sacle the output by a constant
+        # * 起到一定归一化的作用
         x *= 0.18215
         
         # * (batch, 4, height / 8, width / 8)

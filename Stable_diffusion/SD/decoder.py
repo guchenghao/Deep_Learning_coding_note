@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from Stable_diffusion.SD.attention import SelfAttention
+from Stable_diffusion.attention import SelfAttention
 
 
 class VAE_ResidualBlock(nn.Module):
@@ -67,7 +67,7 @@ class VAE_AttentionBlock(nn.Module):
     def __init__(self, channels):
         super().__init__()
         self.group_norm = nn.GroupNorm(32, channels)
-        self.attention = SelfAttention(1, channels)
+        self.attention = SelfAttention(1, channels) # * head默认为1
         
 
     def forward(self, x):
@@ -96,12 +96,91 @@ class VAE_AttentionBlock(nn.Module):
 class VAE_Decoder(nn.Sequential):
     """Some Information about VAE_Decoder"""
     def __init__(self):
+        # *
         super().__init__(
+            
+            
+             # ! 输入阶段
+             # * (batch, 4, height / 8, width / 8) -> same
+             nn.Conv2d(4, 4, kernel_size=1),
              
-            
-            
+             
+             # ! 残差卷积和自注意力阶段
+             # * 这个过程是到着encoder的顺序，进行设计的
+             # * (batch, 4, height / 8, width / 8) -> (batch, 512, height / 8, width / 8)
+             # * 提升channel的数量
+             nn.Conv2d(4, 512, kernel_size=3, padding=1),
+             
+             VAE_ResidualBlock(512, 512),
+             
+             VAE_AttentionBlock(512),
+             
+             VAE_ResidualBlock(512, 512),
+             
+             VAE_ResidualBlock(512, 512),
+             
+             VAE_ResidualBlock(512, 512),
+             
+             # * (batch, 512, height / 8, width / 8) -> same
+             VAE_ResidualBlock(512, 512),
+             
+             
+             # ! 上采样1
+             # * (batch, 512, height / 8, width / 8) -> (batch, 512, height / 4, width / 4)
+             # * 一般来说，upsample会结合conv2d一起使用，upsampling通过插值的方式还原图像的size，conv2d来补充采样细节
+             nn.Upsample(scale_factor=2),
+             
+             nn.Conv2d(512, 512, kernel_size=3, padding=1),
+             
+             VAE_ResidualBlock(512, 512),
+             VAE_ResidualBlock(512, 512),
+             # * (batch, 512, height / 4, width / 4)
+             VAE_ResidualBlock(512, 512),
+             
+             
+             # ! 上采样2
+             # * (batch, 512, height / 4, width / 4) -> (batch, 512, height / 2, width / 2)
+             nn.Upsample(scale_factor=2),
+             
+             nn.Conv2d(512, 512, kernel_size=3, padding=1),
+             
+             VAE_ResidualBlock(512, 256),
+             VAE_ResidualBlock(256, 256),
+             # * (batch, 256, height / 2, width / 2)
+             VAE_ResidualBlock(256, 256),
+             
+             
+             # ! 上采样3
+             # * (batch, 256, height / 2, width / 2) -> (batch, 256, height, width)
+             nn.Upsample(scale_factor=2),
+             
+             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+             
+             VAE_ResidualBlock(256, 128),
+             VAE_ResidualBlock(128, 128),
+             # * (batch, 128, height, width)
+             VAE_ResidualBlock(128, 128),
+             
+             
+             # ! 输出阶段
+             nn.GroupNorm(32, 128),
+             
+             nn.SiLU(),
+             
+             # * (batch, 128, height, width) -> (batch, 3, height, width)
+             nn.Conv2d(128, 3, kernel_size=3, padding=1)
+             
         )
 
     def forward(self, x):
-
+        # * x: (batch, 4, height / 8, height / 8)
+        
+        x /= 0.18215
+        
+        # * 顺序执行decoder中每个层
+        for module in self:
+            x = module(x)
+        
+        
+        # * (batch, 3, height, width)
         return x
