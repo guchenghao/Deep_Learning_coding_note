@@ -79,7 +79,7 @@ class MyLinkedList(object):
 
     def __init__(self):
         self.dummy_head = LinkNode()  # * 设置一个虚拟头指针
-        self.size = 0
+        self.size = 0   # * 要记得设置链表的size
         
 
     def get(self, index):
