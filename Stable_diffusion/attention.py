@@ -20,7 +20,7 @@ class SelfAttention(nn.Module):
         
         self.dropout_layer = nn.Dropout(0.1)
 
-    def forward(self, x, attention_mask=None):
+    def forward(self, x, attention_mask=False):
         
         batch, seq_len, _ = x.size()
         
