@@ -34,7 +34,7 @@ class VAE_ResidualBlock(nn.Module):
         
         residue = x
         
-        x = self.groupnorm_1(x)
+        x = self.groupnorm_1(x) # * 为了完成block的堆叠，先做normalization，可以理解为是对上一个block的输入先进行归一化
         
         x = F.silu(x) # * 激活函数一般放置在Normalization之后
         
@@ -107,7 +107,7 @@ class VAE_Decoder(nn.Sequential):
              
              # ! 残差卷积和自注意力阶段
              # * 这个过程是到着encoder的顺序，进行设计的
-             # * (batch, 4, height / 8, width / 8) -> (batch, 512, height / 8, width / 8)
+             # * (batch, 4, height / 8, width / 8) -> (batch, 512, height / 8, width / 8), size不变
              # * 提升channel的数量
              nn.Conv2d(4, 512, kernel_size=3, padding=1),
              

@@ -10,6 +10,7 @@ from decoder import VAE_AttentionBlock, VAE_ResidualBlock
 # * 可能对SD开发团队来说，他们也去直接搬运了之前一些研究或者开发团队的encoder的设计框架，单纯是因为效果好
 # * 如果只是简单地添加一些新的功能（如添加初始化方法），但不修改 forward 流程，可以继承 nn.Sequential。
 # * 如果需要自定义 forward 方法以实现更复杂的逻辑，应该继承自 nn.Module。
+# * 根据经验来说，设计encoder和decoder的在输入阶段或者是输出阶段，是不会改变输入的size的，只是会改变channels的数量
 class VAE_Encoder(nn.Sequential):
     """Some Information about VAE_Encoder"""
     def __init__(self):
@@ -31,8 +32,9 @@ class VAE_Encoder(nn.Sequential):
             
             
             
-            # ! 降维1
+            # ! 下采样1
             # * (batch, 128, height, width) -> (batch, 128, height / 2, width / 2)
+            # ! 值得注意的是提升或降低channels的这个举动在绝大多数的encoder的decoder中，是在残差模块完成的
             nn.Conv2d(128, 128, kernel_size=3, stride=2), # * size减半，降维
             
             # * (batch, 128, height / 2, width/ 2) -> (batch, 256, height/ 2, width/ 2)
@@ -43,7 +45,7 @@ class VAE_Encoder(nn.Sequential):
             
             
             
-            # ! 降维2
+            # ! 下采样2
             # * (batch, 256, height/ 2, width/ 2) -> (batch, 256, height/ 4, width/ 4)
             nn.Conv2d(256, 256, kernel_size=3, stride=2), # * size减半，降维
             
@@ -55,7 +57,7 @@ class VAE_Encoder(nn.Sequential):
             
             
             
-            # ! 降维3
+            # ! 下采样3
             # * (batch, 512, height/ 4, width/ 4) -> (batch, 512, height/ 8, width/ 8)
             nn.Conv2d(512, 512, kernel_size=3, stride=2), # * size减半，降维
             
@@ -91,8 +93,7 @@ class VAE_Encoder(nn.Sequential):
             
             
             
-            # ! 输出阶段
-            # * Bottleneck
+            # ! 输出阶段 (Bottleneck)
             # * (batch, 512, height/ 8, width/ 8) -> (batch, 8, height/ 8, width/ 8)
             nn.Conv2d(512, 8, kernel_size=3, padding=1), # * 不改变size的大小
             

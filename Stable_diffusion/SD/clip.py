@@ -22,7 +22,7 @@ class CLIPEmbedding(nn.Module):
         tokens = self.token_embedding(tokens)
         
         
-        x += self.position_embedding  # * 添加位置编码
+        tokens += self.position_embedding  # * 添加位置编码
         
         return tokens
 
@@ -49,7 +49,7 @@ class CLIPLayer(nn.Module):
         # ! Multi-head Attention
         residue = x
         
-        x = self.layer_norm_att(x)
+        x = self.layer_norm_att(x) # * 先做layer normalization
         
         x = self.attention(x, True) # * 将mask设置为True
         
@@ -59,7 +59,7 @@ class CLIPLayer(nn.Module):
         # ! FFN
         residue = x
         
-        x = self.layer_norm_ffn(x)
+        x = self.layer_norm_ffn(x) # * 先做layer normalization
         
         x = self.up_dim(x)
         
@@ -83,7 +83,7 @@ class CLIPLayer(nn.Module):
 
 
 
-# * clip的结构与transformer的encoder结构很像
+# * clip的结构: 实际上就是多个transfomer的encoder的堆叠
 class CLIP(nn.Module):
     """Some Information about CLIP"""
     def __init__(self):
@@ -93,7 +93,8 @@ class CLIP(nn.Module):
         self.embedding = CLIPEmbedding(49408, 768, 77) 
         
         # * 12是head的数量，768是hidden_dim
-        self.layers = nn.module([CLIPLayer(12, 768) for i in range(12)])
+        # * 堆叠了12个
+        self.layers = nn.ModuleList([CLIPLayer(12, 768) for i in range(12)])
         
         self.layer_norm = nn.LayerNorm(768)
 
