@@ -67,7 +67,7 @@ class MyLinkedList:
 
 
 
-
+# * 使用了虚拟头结点的方法之后，只需要对cur.next进行操作就可以了
 class LinkNode(object):
     def __init__(self, val=0, next=None):
         self.val = val
