@@ -47,7 +47,116 @@ class SwitchSequential(nn.Sequential):
         return latent
 
 
+class UpSample(nn.Module):
+    """Some Information about UpSample"""
+    def __init__(self, channels):
+        super().__init__()
+        
+        self.conv_2d = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
 
+    def forward(self, x):
+        # * (batch, features, height, width) -> (batch, features,  height * 2, width * 2)
+        
+        x = F.interpolate(x, scale_factor=2, mode="nearest")  # * 做最近邻插值
+        
+        x = self.conv_2d(x)
+        
+
+        return x
+
+
+
+
+class UNET_OutputLayer(nn.Module):
+    """Some Information about UNET_OutputLayer"""
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.group_norm = nn.GroupNorm(32, in_channels)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+
+    def forward(self, x):
+        # * x: (batch, 320, height / 8, width / 8)
+        
+        x = self.group_norm(x)
+        
+        x = F.silu(x)
+        
+        x = self.conv(x)
+        
+        
+        # * (batch, 4, height / 8, width / 8)
+        return x
+
+
+class UNET_ResidualBlock(nn.Module):
+    # * UNET的残差模块和VAE的残差模块的设计基本一致
+    # ! UNET的残差模块多一个输入: (latent, time)
+    """Some Information about UNET_ResidualBlock"""
+    def __init__(self, in_channels, out_channels, time_dim = 1280):
+        super().__init__()
+        
+        
+        self.group_norm_features = nn.GroupNorm(32, in_channels)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+        
+        
+        self.group_norm_merged = nn.GroupNorm(32, out_channels)
+        self.conv_merged = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+        
+        
+        self.linear_time = nn.Linear(time_dim, out_channels)  # * 对于时间步的嵌入向量只需要通过一个线性层进行处理
+        
+        if in_channels == out_channels:
+            self.residual_layer = nn.Identity()
+            
+        else:
+            self.residual_layer = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+        
+        
+
+    def forward(self, latent, time):
+        # * latent: (batch, in_channels, height, width)
+        # * time: (1, 1280)
+        
+        residue = latent
+        
+        latent = self.group_norm_features(latent)
+        
+        latent = F.silu(latent)
+        
+        latent = self.conv1(latent) # * (batch, in_channels, height, width) -> (batch, out_channels, height, width)
+        
+        
+        # * 这里是与VAE的残差块不同的地方
+        time = F.silu(time)
+        
+        time = self.linear_time(time) # * (1, 1280) -> (1, out_channels)
+        
+        # * 相当于将时间嵌入向量的每个channel的值，加到对应channel下，每个像素点上，让每个像素点都带上时间的信息再进行之后的卷积
+        merged = latent + time.unsqueeze(-1).unsqueeze(-1) # * (batch, out_channels, height, width) + (1, out_channels, 1, 1) -> (batch, out_channels, height, width)
+        
+        merged = self.group_norm_merged(merged)
+        
+        merged = F.silu(merged)
+        
+        merged = self.conv_merged(merged)
+        
+        
+        # * (batch, out_channels, height, width)
+        # * 残差块的输出是结合了时间和潜在变量的信息
+        return merged + self.residual_layer(residue)
+
+
+class UNET_AttentionBlock(nn.Module):
+    # * 这个AttentionBlock需要处理两个输入: 一个是结合了时间信息的latent; 一个是来自CLIP的文本嵌入向量
+    # * 这个进行的是cross attention, 因为需要处理多模态的输入
+    """Some Information about UNET_AttentionBlock"""
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+
+        return x
 
 
 
@@ -148,8 +257,7 @@ class UNET(nn.Module):
             
             
             # ! 输出前处理
-            SwitchSequential(UNET_ResidualBlock(640, 320), UNET_AttentionBlock(8 ,40))
-            
+            SwitchSequential(UNET_ResidualBlock(640, 320), UNET_AttentionBlock(8 ,40))   
         ])
 
     def forward(self, x):
