@@ -4,6 +4,10 @@ from torch.nn import functional as F
 from Stable_diffusion.attention import SelfAttention, CrossAttention
 
 
+# * 一般需要进行堆叠的模块，要把Normalization放在最前面
+
+
+
 # * 由两个linear层组成, 中间加个激活函数
 class TimeEmbedding(nn.Module):
     """Some Information about TimeEmbedding"""
@@ -57,7 +61,7 @@ class UpSample(nn.Module):
     def forward(self, x):
         # * (batch, features, height, width) -> (batch, features,  height * 2, width * 2)
         
-        x = F.interpolate(x, scale_factor=2, mode="nearest")  # * 做最近邻插值
+        x = F.interpolate(x, scale_factor=2, mode="nearest")  # * 做最近邻插值和Upsample层的作用一样，都是通过插值的方式将图片的size放大
         
         x = self.conv_2d(x)
         
@@ -110,7 +114,7 @@ class UNET_ResidualBlock(nn.Module):
             self.residual_layer = nn.Identity()
             
         else:
-            self.residual_layer = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+            self.residual_layer = nn.Conv2d(in_channels, out_channels, kernel_size=1, padding=0)
         
         
 
@@ -151,12 +155,87 @@ class UNET_AttentionBlock(nn.Module):
     # * 这个AttentionBlock需要处理两个输入: 一个是结合了时间信息的latent; 一个是来自CLIP的文本嵌入向量
     # * 这个进行的是cross attention, 因为需要处理多模态的输入
     """Some Information about UNET_AttentionBlock"""
-    def __init__(self):
+    def __init__(self, head_num, headdim, hiddendim_CLIP=768):
         super().__init__()
+        channels = head_num * headdim
+        
+        self.group_norm = nn.GroupNorm(32, channels, eps=1e-6)
+        self.conv_input = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
+        
+        self.layer_norm_1 = nn.LayerNorm(channels)
+        self.self_attention = SelfAttention(head_num, channels, in_proj_bias=False)
+        self.layer_norm_2 = nn.LayerNorm(channels)
+        self.cross_attention = CrossAttention(head_num, channels, in_proj_bias=False)
+        self.layer_norm_3 = nn.LayerNorm(channels)
+        
+        # * GEGLU 激活函数（Gated Linear Unit with GeLU）是一种基于门控线性单元（GLU）和 Gaussian Error Linear Unit (GeLU) 激活函数结合的改进型激活函数。
+        # * geglu = (xW1 + b1) * (xW2 + b2)
+        self.linear_geglu_1 = nn.Linear(channels, 4 * channels * 2)
+        self.linear_geglu_2 = nn.Linear(4 * channels, channels)
+        
+        
+        self.conv_output = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
+        
 
-    def forward(self, x):
-
-        return x
+    def forward(self, latent_time, context_CLIP):
+        # * latent_time: (batch, features, height, width)
+        # * context_CLIP: (batch, seq, hiddendim=768)
+        
+        
+        residue_long = latent_time  # * 最初的残差
+        
+        # * 先对latent_time进行处理
+        latent_time = self.group_norm(latent_time)
+        
+        latent_time = self.conv_input(latent_time)
+        
+        b, c, h, w = latent_time.shape
+        
+        # * (batch, features, height, width) -> (batch, features, height * width)
+        latent_time = latent_time.view(b, c, h*w).contiguous()
+        
+        # * (batch, features, height * width) -> (batch, height * width, features)
+        latent_time = latent_time.transpose(-1, -2)
+        
+        
+        # * Normalization + self-attention with skip connection
+        # * latent_time: (batch, height * width, features)
+        residue_short = latent_time  # * 做完selfAttention的残差
+        
+        latent_time = self.layer_norm_1(latent_time)
+        latent_time = self.self_attention(latent_time)
+        
+        latent_time += residue_short
+        
+        
+        # * Normalization + Cross-attention with skip connection
+        residue_short = latent_time
+        
+        latent_time = self.layer_norm_2(latent_time)
+        latent_time = self.cross_attention(latent_time, context_CLIP)
+        
+        latent_time += residue_short
+        
+        
+        # * Normalization + FFN with GeGLU and skip connection
+        residue_short = latent_time
+        
+        latent_time = self.layer_norm_3(latent_time)
+        
+        latent_time, gate = self.linear_geglu_1(latent_time).chunk(2, dim=-1)
+        
+        latent_time = latent_time * F.gelu(gate)
+        
+        
+        latent_time = self.linear_geglu_2(latent_time)
+        
+        latent_time += residue_short
+        
+        # * (batch, height * width, features) -> (batch, features, height, width)
+        latent_time = latent_time.transpose(-1, -2).view(b, c, h, w)
+        
+        
+        return residue_long + self.conv_output(latent_time)
 
 
 

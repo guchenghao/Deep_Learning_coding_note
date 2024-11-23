@@ -2309,3 +2309,113 @@ F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=True)
 
 
 
+
+## geglu激活函数
+
+
+**GEGLU 激活函数**（Gated Linear Unit with GeLU）是一种基于门控线性单元（GLU）和 Gaussian Error Linear Unit (GeLU) 激活函数结合的改进型激活函数。它是为了进一步提升模型的非线性表达能力，同时减少计算复杂度。
+
+GEGLU 是 **GLU** 的一种变体，其定义如下：
+
+---
+
+### **1. GEGLU 的公式**
+
+给定输入 \( x \)，GEGLU 的计算公式为：
+\[
+\text{GEGLU}(x) = (xW_1 + b_1) \odot \text{GeLU}(xW_2 + b_2)
+\]
+其中：
+
+- \( W_1 \) 和 \( W_2 \) 是两个线性变换的权重矩阵。
+- \( b_1 \) 和 \( b_2 \) 是对应的偏置。
+- \( \odot \) 表示逐元素相乘（element-wise multiplication）。
+- \( \text{GeLU} \) 是 Gaussian Error Linear Unit 激活函数，公式为：
+  \[
+  \text{GeLU}(z) = z \cdot \Phi(z)
+  \]
+  其中 \( \Phi(z) \) 是标准正态分布的累积分布函数。
+
+### **2. 直观解释**
+
+- **GLU** 使用门控机制，通过两个分支分别生成值和门控权重，并通过逐元素相乘调节输出。
+- **GEGLU** 将 GLU 的线性分支替换为 GeLU 激活函数分支：
+  - 一部分对输入执行线性变换。
+  - 另一部分通过 GeLU 激活提供非线性门控作用。
+
+这种设计可以更灵活地控制输入数据的非线性组合，提升模型的表达能力。
+
+---
+
+### **3. 为什么使用 GEGLU？**
+
+#### **(1) GEGLU 的优点**
+
+1. **增强非线性能力**：
+   - GeLU 是一种强大的非线性激活函数，能够更好地捕获复杂模式。
+   - GEGLU 引入 GeLU 激活，可以让门控权重的生成更加多样化和非线性。
+
+2. **参数效率**：
+   - GEGLU 保持与 GLU 相似的参数量，计算复杂度与 GLU 接近，但在实际应用中往往表现更优。
+
+3. **改进的梯度流**：
+   - GeLU 的平滑非线性函数具有更稳定的梯度更新效果，减少了训练不稳定性。
+
+#### **(2) 应用场景**
+
+GEGLU 在一些现代深度学习架构中被广泛应用，特别是需要高效激活函数的任务，例如：
+
+- 自然语言处理（NLP）中的 Transformer 模型。
+- 图像处理中的 Vision Transformer (ViT)。
+- 其他需要多头注意力机制和非线性建模的任务。
+
+---
+
+### **4. PyTorch 实现 GEGLU**
+
+以下是用 PyTorch 实现 GEGLU 的代码示例：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class GEGLU(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(GEGLU, self).__init__()
+        self.fc1 = nn.Linear(input_dim, output_dim)  # 第一分支
+        self.fc2 = nn.Linear(input_dim, output_dim)  # 第二分支
+
+    def forward(self, x):
+        linear_output = self.fc1(x)
+        gate = F.gelu(self.fc2(x))  # 使用 GeLU 激活函数
+        return linear_output * gate  # 逐元素相乘
+
+# 示例用法
+x = torch.randn(32, 128)  # 输入 (batch_size, input_dim)
+geglu = GEGLU(128, 64)  # 输入维度 128, 输出维度 64
+output = geglu(x)
+print(output.shape)  # 输出: (32, 64)
+```
+
+---
+
+### **5. GEGLU 与其他激活函数的比较**
+
+| 激活函数 | 公式                                           | 优点                          | 应用场景                           |
+|----------|------------------------------------------------|-------------------------------|------------------------------------|
+| **ReLU** | \( \text{ReLU}(x) = \max(0, x) \)             | 简单高效，梯度流稳定           | CNN、MLP、NLP                     |
+| **GeLU** | \( \text{GeLU}(x) = x \cdot \Phi(x) \)        | 平滑非线性，梯度流稳定         | Transformer                       |
+| **GLU**  | \( \text{GLU}(x) = (xW_1 + b_1) \odot (xW_2 + b_2) \) | 门控机制，捕捉复杂特征        | NLP, Attention 模块               |
+| **GEGLU**| \( \text{GEGLU}(x) = (xW_1 + b_1) \odot \text{GeLU}(xW_2 + b_2) \) | 增强非线性能力，改进的梯度流  | Modern Transformer, ViT 等复杂任务|
+
+---
+
+### **6. 总结**
+
+- **GEGLU 激活函数** 是 GLU 的改进版本，通过引入 GeLU 激活函数增强了非线性能力，同时保持参数效率和训练稳定性。
+- 它的设计特别适合现代深度学习任务，尤其是在多模态学习和注意力机制中有很好的表现。
+- PyTorch 提供了灵活的 API，能够轻松实现 GEGLU。
+
+
+
