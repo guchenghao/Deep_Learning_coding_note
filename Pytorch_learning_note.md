@@ -2419,3 +2419,152 @@ print(output.shape)  # 输出: (32, 64)
 
 
 
+
+
+
+## torch.Generator()
+
+在 PyTorch 中，`torch.Generator` 是一个用于生成随机数的工具，它可以控制随机数生成的状态，从而确保随机操作的可重复性。
+
+---
+
+### **主要功能**
+
+1. **控制随机数生成**：
+   - `torch.Generator` 提供了一个独立的随机数生成器，与全局随机状态分离。
+   - 它可以用于多线程或分布式计算中，确保每个线程/进程的随机数生成互不干扰。
+
+2. **设置种子**：
+   - 可以使用 `generator.manual_seed(seed)` 来设置生成器的随机种子，从而保证可重复性。
+
+3. **支持多种设备**：
+   - 可以创建用于 CPU 或 GPU 的生成器，控制不同设备上的随机数生成。
+
+---
+
+### **创建和使用**
+
+#### 创建一个生成器
+
+```python
+import torch
+
+# 创建一个默认的生成器
+gen = torch.Generator()
+
+# 设置随机种子
+gen.manual_seed(42)
+```
+
+#### 使用生成器
+
+许多支持随机数的 PyTorch 函数都可以指定一个生成器。例如：
+
+```python
+# 使用生成器生成随机数
+random_tensor = torch.randn(3, 3, generator=gen)
+print(random_tensor)
+
+# 再次生成，结果是相同的
+random_tensor_2 = torch.randn(3, 3, generator=gen)
+print(random_tensor_2)
+```
+
+---
+
+### **重要方法**
+
+1. **`manual_seed(seed)`**：
+   - 设置生成器的随机种子，确保结果的可重复性。
+
+   ```python
+   gen = torch.Generator()
+   gen.manual_seed(1234)
+   ```
+
+2. **`seed()`**：
+   - 返回生成器当前的种子。
+
+   ```python
+   current_seed = gen.seed()
+   print(current_seed)
+   ```
+
+3. **`initial_seed()`**：
+   - 返回生成器初始化时的种子。
+
+   ```python
+   init_seed = gen.initial_seed()
+   print(init_seed)
+   ```
+
+---
+
+### **指定设备**
+
+可以为不同设备创建生成器：
+
+```python
+# 创建一个用于 CPU 的生成器
+gen_cpu = torch.Generator(device="cpu")
+
+# 创建一个用于 GPU 的生成器
+if torch.cuda.is_available():
+    gen_gpu = torch.Generator(device="cuda")
+
+    # 在 GPU 上使用生成器生成随机数
+    random_tensor_gpu = torch.randn(3, 3, device="cuda", generator=gen_gpu)
+    print(random_tensor_gpu)
+```
+
+---
+
+### **使用场景**
+
+1. **可重复性**：
+   - 在实验或模型训练中，确保随机数的生成可重复。
+   - 使用单独的生成器可以更精细地控制随机性，而不是依赖全局种子。
+
+2. **分布式训练**：
+   - 在分布式计算中，为每个进程或设备分配独立的生成器，确保互不干扰。
+
+3. **随机数独立性**：
+   - 在多线程或多进程环境中，避免因共享全局随机状态导致的冲突。
+
+---
+
+### 示例：控制随机性
+
+```python
+import torch
+
+# 创建两个生成器
+gen1 = torch.Generator()
+gen2 = torch.Generator()
+
+# 设置不同的种子
+gen1.manual_seed(42)
+gen2.manual_seed(123)
+
+# 使用不同的生成器生成随机数
+rand1 = torch.rand(3, generator=gen1)
+rand2 = torch.rand(3, generator=gen2)
+
+print("使用 gen1 的随机数:", rand1)
+print("使用 gen2 的随机数:", rand2)
+```
+
+**输出**：
+
+```
+使用 gen1 的随机数: tensor([0.3745, 0.9507, 0.7319])
+使用 gen2 的随机数: tensor([0.6824, 0.4348, 0.1124])
+```
+
+---
+
+### 总结
+
+- **`torch.Generator`** 是一个独立的随机数生成器，支持精确控制随机性。
+- 主要用于可重复性实验、多线程或分布式计算等场景。
+- 它允许通过种子设置来生成可控的随机数，并且支持 CPU 和 GPU 两种设备。
