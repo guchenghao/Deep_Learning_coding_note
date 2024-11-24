@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn
 from torch.nn import functional as F
-from Stable_diffusion.attention import SelfAttention, CrossAttention
+from Stable_diffusion.SD.attention import SelfAttention, CrossAttention
 
 
 # * 一般需要进行堆叠的模块，要把Normalization放在最前面
@@ -340,6 +340,9 @@ class UNET(nn.Module):
         ])
 
     def forward(self, x):
+        
+        
+        
 
         return x
 
@@ -360,7 +363,7 @@ class Diffusion(nn.Module):
         self.time_embedding = TimeEmbedding(320)
         self.unet = UNET()
         
-        self.final = UNET_Outputlayer(320, 4)
+        self.final = UNET_OutputLayer(320, 4)
         
 
     def forward(self, latent, context_CLIP, time):
