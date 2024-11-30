@@ -16,7 +16,7 @@ LATENT_HEIGHT = 512 // 8
 # * do_CFG表示是否采用classifier-free Gudience
 # * cfg_scale表示生成过程关注prompt的强度(1-14)
 # * n_interface_steps表示时间步数
-# * prompt描述的是希望生成什么样的图片；uncond_prmopt是一个空字符串
+# * prompt描述的是希望生成什么样的图片；uncond_prmopt是一个空字符串 或者negative prompt
 def generate(
     prompt,
     uncond_prompt,
@@ -60,7 +60,7 @@ def generate(
 
         clip = models["clip"]
         clip.to(device)
-        
+
         # * 根据是够采用CFG准则，来判断如何构建token
         if do_CFG:
 
@@ -82,7 +82,7 @@ def generate(
             uncond_context = clip(uncond_tokens)
 
             # * total context (2, 77, 768)
-            context = torch.cat([cond_context, uncond_context])
+            context = torch.cat([cond_context, uncond_context], dim=0)
 
         else:
             # * Convert it into a list of tokens
@@ -99,7 +99,7 @@ def generate(
 
         if sampler_name == "ddpm":
             sampler = DDPMSampler(generator)
-            sampler.set_inference_step(n_inference_steps)  # * 设置生成过程的时间步数
+            sampler.set_inference_steps(n_inference_steps)  # * 设置生成过程的时间步数
 
         else:
             raise ValueError(f"Unknow sampler {sampler_name}")
@@ -116,6 +116,7 @@ def generate(
             # * (height, width, channel)
             input_image_tensor = torch.tensor(input_image_tensor, dtype=torch.float32)
 
+            # * 将图片进行Normalization
             input_image_tensor = rescale(input_image_tensor, (0, 255), (-1, 1))
             # * (height, width, channel) -> (batch, height, width, channel)
             input_image_tensor = input_image_tensor.unsqueeze(0)
@@ -129,8 +130,9 @@ def generate(
             latent_image = encoder(input_image_tensor, encoder_noise_eps)
 
             # * strength的大小决定了添加noise的多少, 例如strength设置为1，说明初始噪声强度是最大的
-            sampler.set_strength(strength=strength)  
-            latent_image = sampler.add_noise(latent_image, sampler.timesteps[0])
+            sampler.set_strength(strength=strength)
+            # * 这里timestep[0]的意思是添加最大时间步对应的噪声，时间步越大说明噪声越多
+            latents = sampler.add_noise(latent_image, sampler.timesteps[0])
 
             to_idle(encoder)
 
@@ -140,19 +142,88 @@ def generate(
             latents = torch.randn(
                 size=latents_shape, device=device, generator=generator
             )
-            
-        
+
         # * 进入去噪阶段
         # * 1000 980 960 940 920 900 880 860 840 .... (总共50步), 1000 / 20
         diffusion = models["diffusion"]
         diffusion.to(device)
-        
-        
-        
-        
-        
-        
-        
-        
-            
-            
+
+        timesteps = tqdm(sampler.timesteps)
+
+        for i, timestep in enumerate(timesteps):
+            # * int -> (1, 320)
+            time_embedding = get_time_embedding(timestep).to(device)  # * 这一步采用了transformer中的positional embedding的方法，使用正弦和余弦函数来计算time embedding
+
+            # * (batch, 4, HEIGHT / 8 = 64 , WIDTH / 8 = 64)
+            model_input = latents
+
+            if do_CFG:
+                # * (batch, 4, HEIGHT / 8 = 64 , WIDTH / 8 = 64) -> (batch * 2, 4, HEIGHT / 8 = 64 , WIDTH / 8 = 64)
+                # * 之所以repeat，是因为context中有conditional prompt 和unconditional prompt
+                model_input = model_input.repeat(2, 1, 1, 1)
+
+            # * model_output is the prediected noise by the UNET
+            model_output = diffusion(model_input, context, time_embedding)
+
+            if do_CFG:
+                output_cond, output_uncond = model_output.chunk(2, dim=0)
+
+                model_output = cfg_scale * (output_cond - output_uncond) + output_uncond
+
+            # * remove the noise prediected by UNET
+            # * 移除UNET预测的噪声
+            latents = sampler.step(timestep, latents, model_output)
+
+        to_idle(diffusion)
+
+        decoder = models["decoder"]
+        decoder.to(device)
+
+        # * (batch, 4, HEIGHT / 8 = 64 , WIDTH / 8 = 64) -> (batch, 3, HEIGHT, WIDTH)
+        images = decoder(latents)
+        to_idle(decoder)
+
+        # * (batch, 3, HEIGHT, WIDTH)
+        images = rescale(images, (-1, 1), (0, 255), clamp=True)
+        # * (batch, 3, HEIGHT, WIDTH) -> (batch, HEIGHT, WIDTH, 3)
+        images = images.permute(0, 2, 3, 1)
+
+        images = images.to("cpu", torch.uint8).numpy()  # * 这个操作一般用于图像处理
+
+        return images[0]
+
+
+# * 用于缩放或归一化原始数据的数值范围
+def rescale(x, original_range, target_range, clamp=False):
+
+    original_min, original_max = original_range
+    target_min, target_max = target_range
+    
+    # * x = (x - original_min) / (original_max - original_min)
+    # * x = x * (target_max - target_min) + target_min
+    # * 这部分代码是先将原始范围缩放到[0, 1]范围，然后在乘上目标范围的宽度，在加上目标范围的下界
+    x -= original_min
+    x *= (target_max - target_min) / (original_max - original_min)
+    x += target_min
+
+    if clamp:
+        x = x.clamp(target_min, target_max)
+    
+    
+    return x
+
+
+# * int -> (1, 320)
+# * 将timestep转化为向量
+def get_time_embedding(timestep):
+    # * 获取time_embedding方式和transformer的positional embedding的方式一模一样
+    # * 幂次运算
+    # * (160, )
+    freqs = torch.pow(10000, -torch.arange(start=0, end=160, dtype=torch.float32) / 160)
+    
+    # * (1, 1) * (1,  160) -> (1, 160)
+    x = torch.tensor([timestep], dtype=torch.float32).unsqueeze(1) * freqs.unsqueeze(0)
+    
+    
+    # * (1, 160) -> (1, 320)
+    return torch.cat(torch.cos(x), torch.sin(x), dim=1)
