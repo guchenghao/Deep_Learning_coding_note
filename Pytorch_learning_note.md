@@ -2568,3 +2568,536 @@ print("使用 gen2 的随机数:", rand2)
 - **`torch.Generator`** 是一个独立的随机数生成器，支持精确控制随机性。
 - 主要用于可重复性实验、多线程或分布式计算等场景。
 - 它允许通过种子设置来生成可控的随机数，并且支持 CPU 和 GPU 两种设备。
+
+
+
+
+
+## torch.pow()
+
+
+
+在 PyTorch 中，**`torch.pow`** 是用于计算元素级指数运算（即幂运算）的函数。
+
+---
+
+### **用法**
+
+#### 1. **计算张量的幂次**
+
+\[
+\text{result} = \text{input}^p
+\]
+
+- 计算每个元素的 \( p \) 次幂。
+
+#### 2. **计算标量的幂次**
+
+\[
+\text{result} = \text{base}^{\text{exponent}}
+\]
+
+---
+
+### **函数签名**
+
+```python
+torch.pow(input, exponent, out=None) → Tensor
+```
+
+- **参数**：
+  - `input`：可以是一个张量或标量。
+  - `exponent`：可以是标量、张量，或与 `input` 形状相同的张量。
+  - `out`（可选）：用于存储结果的张量。
+
+- **返回值**：
+  - 返回一个新的张量，每个元素是对应输入值的幂次。
+
+---
+
+### **示例代码**
+
+#### **1. 张量的幂次**
+
+计算张量中每个元素的幂次：
+
+```python
+import torch
+
+# 示例张量
+x = torch.tensor([1, 2, 3, 4], dtype=torch.float32)
+
+# 计算平方
+result = torch.pow(x, 2)
+print(result)  # tensor([ 1.,  4.,  9., 16.])
+```
+
+#### **2. 张量与张量的幂次**
+
+\[
+\text{result}[i] = \text{input}[i]^{\text{exponent}[i]}
+\]
+
+```python
+base = torch.tensor([2, 3, 4], dtype=torch.float32)
+exponent = torch.tensor([1, 2, 3], dtype=torch.float32)
+
+result = torch.pow(base, exponent)
+print(result)  # tensor([  2.,   9.,  64.])
+```
+
+#### **3. 标量与张量的幂次**
+
+```python
+# 示例张量
+x = torch.tensor([1, 2, 3], dtype=torch.float32)
+
+# 计算 3 的每个元素次幂
+result = torch.pow(3, x)
+print(result)  # tensor([ 3.,  9., 27.])
+```
+
+#### **4. 使用 `out` 参数**
+
+将结果存储到指定张量中：
+
+```python
+x = torch.tensor([1, 2, 3], dtype=torch.float32)
+out = torch.empty(3)
+
+torch.pow(x, 2, out=out)
+print(out)  # tensor([ 1.,  4.,  9.])
+```
+
+---
+
+### **广播机制**
+
+如果 `input` 和 `exponent` 形状不同，但满足广播条件，则会自动进行广播。
+
+```python
+base = torch.tensor([[1, 2], [3, 4]], dtype=torch.float32)
+exponent = torch.tensor([2, 3], dtype=torch.float32)  # 形状 (2,)
+
+result = torch.pow(base, exponent)
+print(result)
+# tensor([[  1.,   8.],
+#         [  9.,  64.]])
+```
+
+---
+
+### **注意事项**
+
+1. **指数为负数**：如果 `input` 包含 0 且 `exponent` 为负数，会导致除以零的错误：
+
+   ```python
+   x = torch.tensor([0, 2, 3], dtype=torch.float32)
+   torch.pow(x, -1)  # 会报错，因为 0 的负次幂是未定义的
+   ```
+
+2. **指数为浮点数**：支持非整数的幂运算。
+
+   ```python
+   x = torch.tensor([4, 9, 16], dtype=torch.float32)
+   result = torch.pow(x, 0.5)  # 等价于求平方根
+   print(result)  # tensor([2., 3., 4.])
+   ```
+
+3. **替代方法**：
+   - **直接用 `**` 运算符**：
+
+     ```python
+     x = torch.tensor([1, 2, 3], dtype=torch.float32)
+     result = x ** 2  # 等价于 torch.pow(x, 2)
+     print(result)  # tensor([1., 4., 9.])
+     ```
+
+---
+
+### **总结**
+
+- **`torch.pow`** 是一个强大的函数，用于计算幂次运算，支持张量与张量、张量与标量的运算。
+- 自动支持广播机制，可以灵活处理不同形状的张量。
+- 当需要提高代码可读性时，也可以使用 `**` 运算符作为替代。
+
+如果你有更具体的问题或需求，请告诉我！
+
+
+
+
+## torch.linspace
+
+
+在 PyTorch 中，**`torch.linspace`** 是一个生成等间距数值序列的函数，常用于创建均匀分布的采样点。
+
+---
+
+### **函数签名**
+
+```python
+torch.linspace(start, end, steps, *, dtype=None, layout=torch.strided, device=None, requires_grad=False) → Tensor
+```
+
+---
+
+### **参数说明**
+
+- **`start`** (float)：序列的起始值。
+- **`end`** (float)：序列的结束值。
+- **`steps`** (int)：生成的点数，包含 `start` 和 `end`。如果 `steps=1`，则返回 `[start]`。
+- **`dtype`** (optional)：生成张量的数据类型（如 `torch.float32`、`torch.int64`）。
+- **`device`** (optional)：生成张量所在的设备（如 `cpu` 或 `cuda`）。
+- **`requires_grad`** (optional, default=False)：是否需要梯度。
+
+---
+
+### **返回值**
+
+- 一个包含等间距点的 1D 张量。
+
+---
+
+### **用法示例**
+
+#### **1. 生成等间距点**
+
+生成从 0 到 1 的 5 个等间距点：
+
+```python
+import torch
+
+x = torch.linspace(0, 1, steps=5)
+print(x)
+```
+
+**输出**：
+
+```
+tensor([0.0000, 0.2500, 0.5000, 0.7500, 1.0000])
+```
+
+---
+
+#### **2. 控制数据类型**
+
+生成从 -1 到 1 的 4 个等间距点，指定数据类型为 `torch.float32`：
+
+```python
+x = torch.linspace(-1, 1, steps=4, dtype=torch.float32)
+print(x)
+```
+
+**输出**：
+
+```
+tensor([-1.0000, -0.3333,  0.3333,  1.0000])
+```
+
+---
+
+#### **3. 生成单个点**
+
+如果 `steps=1`，返回 `[start]`：
+
+```python
+x = torch.linspace(5, 10, steps=1)
+print(x)
+```
+
+**输出**：
+
+```
+tensor([5.])
+```
+
+---
+
+#### **4. 在 GPU 上生成等间距点**
+
+生成从 0 到 10 的 6 个点并将其存储在 GPU 上：
+
+```python
+x = torch.linspace(0, 10, steps=6, device='cuda')
+print(x)
+```
+
+**输出**：
+
+```
+tensor([ 0.,  2.,  4.,  6.,  8., 10.], device='cuda:0')
+```
+
+---
+
+#### **5. 与 `requires_grad` 配合使用**
+
+生成一个序列，允许其参与梯度计算：
+
+```python
+x = torch.linspace(0, 1, steps=5, requires_grad=True)
+print(x)
+```
+
+**输出**：
+
+```
+tensor([0.0000, 0.2500, 0.5000, 0.7500, 1.0000], requires_grad=True)
+```
+
+---
+
+### **与 NumPy 的对比**
+
+PyTorch 的 `torch.linspace` 类似于 NumPy 的 `numpy.linspace`，两者用法基本一致。
+
+#### NumPy 示例
+
+```python
+import numpy as np
+
+x = np.linspace(0, 1, 5)
+print(x)
+```
+
+**输出**：
+
+```
+[0.   0.25 0.5  0.75 1.  ]
+```
+
+---
+
+### **应用场景**
+
+1. **均匀采样**：
+   在曲线或信号处理中，用于生成等间距的采样点。
+
+2. **测试点生成**：
+   创建测试数据或在模型输入中生成规则的点。
+
+3. **初始化权重**：
+   为一些特殊任务初始化模型权重或偏置值。
+
+4. **绘制图形**：
+   用于生成 x 轴的等间距点。
+
+---
+
+### **注意事项**
+
+- `steps` 必须是正整数。如果设置为非正值会引发错误：
+
+  ```python
+  x = torch.linspace(0, 1, steps=0)  # 会报错
+  ```
+
+- `start` 和 `end` 可以相等，这时所有点的值均相同：
+
+  ```python
+  x = torch.linspace(5, 5, steps=3)
+  print(x)
+  # 输出：tensor([5., 5., 5.])
+  ```
+
+---
+
+
+
+
+# * torch.cumprod
+
+
+
+
+在 PyTorch 中，**`torch.cumprod`** 是一个计算累积乘积的函数。
+
+---
+
+### **函数签名**
+
+```python
+torch.cumprod(input, dim, *, dtype=None) → Tensor
+```
+
+---
+
+### **参数说明**
+
+1. **`input`**：
+   - 输入张量（任意形状）。
+
+2. **`dim`**：
+   - 指定进行累积乘积的维度。
+   - `dim=0` 表示沿第一个维度（行）计算，`dim=1` 表示沿第二个维度（列）计算，依此类推。
+
+3. **`dtype`**（可选）：
+   - 指定输出张量的数据类型。
+   - 如果未指定，则结果的数据类型与输入相同。
+
+---
+
+### **返回值**
+
+- 返回与 `input` 张量形状相同的张量，其中每个元素是累积乘积。
+
+---
+
+### **用法示例**
+
+#### **1. 一维张量**
+
+对于一维张量，计算沿维度的累积乘积：
+
+```python
+import torch
+
+x = torch.tensor([1, 2, 3, 4])
+result = torch.cumprod(x, dim=0)
+print(result)
+```
+
+**输出**：
+
+```
+tensor([ 1,  2,  6, 24])
+```
+
+计算过程：
+
+- 第一个元素：\( 1 \)
+- 第二个元素：\( 1 \times 2 = 2 \)
+- 第三个元素：\( 2 \times 3 = 6 \)
+- 第四个元素：\( 6 \times 4 = 24 \)
+
+---
+
+#### **2. 二维张量**
+
+对于二维张量，可以沿任一维度计算累积乘积。
+
+```python
+x = torch.tensor([[1, 2], [3, 4], [5, 6]])
+
+# 沿 dim=0（行方向）计算累积乘积
+result_dim0 = torch.cumprod(x, dim=0)
+print("Cumulative product along dim=0:")
+print(result_dim0)
+
+# 沿 dim=1（列方向）计算累积乘积
+result_dim1 = torch.cumprod(x, dim=1)
+print("Cumulative product along dim=1:")
+print(result_dim1)
+```
+
+**输出**：
+
+```
+Cumulative product along dim=0:
+tensor([[ 1,  2],
+        [ 3,  8],
+        [15, 48]])
+
+Cumulative product along dim=1:
+tensor([[ 1,  2],
+        [ 3, 12],
+        [ 5, 30]])
+```
+
+---
+
+#### **3. 指定数据类型**
+
+如果输入张量的数据类型是整型，结果可能超出整型范围。可以通过 `dtype` 参数指定结果类型。
+
+```python
+x = torch.tensor([2, 3, 4], dtype=torch.int32)
+result = torch.cumprod(x, dim=0, dtype=torch.float32)
+print(result)
+```
+
+**输出**：
+
+```
+tensor([ 2.,  6., 24.])
+```
+
+---
+
+#### **4. 带零的情况**
+
+如果输入张量中有零，则从零开始的累积乘积会保持为零。
+
+```python
+x = torch.tensor([1, 2, 0, 3, 4])
+result = torch.cumprod(x, dim=0)
+print(result)
+```
+
+**输出**：
+
+```
+tensor([1, 2, 0, 0, 0])
+```
+
+计算过程：
+
+- 在第 3 个位置出现零后，累积乘积结果保持为零。
+
+---
+
+### **注意事项**
+
+1. **维度越界**：
+   - 如果指定的 `dim` 超出张量的维度范围，将引发错误：
+
+     ```python
+     x = torch.tensor([1, 2, 3])
+     torch.cumprod(x, dim=1)  # 会报错
+     ```
+
+2. **数据溢出**：
+   - 对整型张量执行累积乘积可能会导致溢出，特别是在数值较大的情况下。
+   - 可以通过指定 `dtype=torch.float32` 或 `dtype=torch.float64` 来避免。
+
+3. **维度广播**：
+   - `cumprod` 仅在指定维度上操作，不涉及维度广播。
+
+---
+
+### **与 NumPy 的对比**
+
+PyTorch 的 `torch.cumprod` 和 NumPy 的 `numpy.cumprod` 功能类似。
+
+#### NumPy 示例
+
+```python
+import numpy as np
+
+x = np.array([1, 2, 3, 4])
+result = np.cumprod(x)
+print(result)
+```
+
+**输出**：
+
+```
+[ 1  2  6 24]
+```
+
+---
+
+### **应用场景**
+
+1. **概率问题**：
+   - 累积概率计算，如独立事件的联合概率。
+
+2. **金融计算**：
+   - 累积收益率计算。
+
+3. **科学计算**：
+   - 连续乘积的累积效应建模。
+
+---
+
+如果你需要更多具体示例或特殊应用场景的实现，请告诉我！
