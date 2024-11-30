@@ -107,10 +107,10 @@ class CrossAttention(nn.Module):
         query_matrix = self.q_proj(x)
         
         # * (batch, seq_len_kv, dim_kv) -> (batch, seq_len_kv, dim_q)
-        key_matrix = self.k_proj(x)
+        key_matrix = self.k_proj(y)
         
         # * (batch, seq_len_kv, dim_kv) -> (batch, seq_len_kv, dim_q)
-        value_matrix = self.v_proj(x)
+        value_matrix = self.v_proj(y)
         
         # * (batch, seq_len_q, dim_q) -> (batch, head_num, seq_len_q, head_dim)
         query_multi_head = query_matrix.view(b1, seq_q, self.head_num , self.head_dim).transpose(2, 1)
