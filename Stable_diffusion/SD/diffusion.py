@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn
 from torch.nn import functional as F
-from Stable_diffusion.SD.attention import SelfAttention, CrossAttention
+from attention import SelfAttention, CrossAttention
 
 
 # * 一般需要进行堆叠的模块，要把Normalization放在最前面
