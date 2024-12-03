@@ -45,7 +45,7 @@ class SwitchSequential(nn.Sequential):
                 latent = layer(latent, time) # * 残差模块只接受时间步和潜在向量作为输入
             
             else:
-                latent = layer(latent) # * 如果只是卷积层的话，只接收latent作为输入
+                latent = layer(latent) # * 如果是卷积层或者上采样层(Upsample)的话，只接收latent作为输入
                 
 
         return latent
@@ -303,9 +303,10 @@ class UNET(nn.Module):
         
         self.decoder = nn.ModuleList([
             
-            # * (batch, 2560, height / 64, width / 64) -> (batch, 1280, height / 64, width / 64)
+            
             # ! 因为需要考虑到skip connection，所以这里的channel的数量翻倍为2560
             # ! 输入阶段
+            # * (batch, 2560, height / 64, width / 64) -> (batch, 1280, height / 64, width / 64)
             SwitchSequential(UNET_ResidualBlock(2560, 1280)),
             
             SwitchSequential(UNET_ResidualBlock(2560, 1280)),
