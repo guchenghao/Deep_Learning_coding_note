@@ -7,7 +7,6 @@ from attention import SelfAttention, CrossAttention
 # * 一般需要进行堆叠的模块，要把Normalization放在最前面
 
 
-
 # * 由两个linear层组成, 中间加个激活函数
 class TimeEmbedding(nn.Module):
     """Some Information about TimeEmbedding"""
@@ -32,6 +31,7 @@ class TimeEmbedding(nn.Module):
 
 
 # * 这个方法因为不需要初始化，所以可以不写初始化方法
+# * 在diffusion模块的设计中最重要的模块, 用于在多输入的情况下，选择性地执行一些层
 class SwitchSequential(nn.Sequential):
     """Some Information about SwitchSequtial"""
 
@@ -67,8 +67,6 @@ class UpSample(nn.Module):
         
 
         return x
-
-
 
 
 class UNET_OutputLayer(nn.Module):
@@ -238,16 +236,11 @@ class UNET_AttentionBlock(nn.Module):
         return residue_long + self.conv_output(latent_time)
 
 
-
-
-
-
-
 class UNET(nn.Module):
     """Some Information about UNET"""
     def __init__(self):
         super().__init__()
-        
+
         # * 减少size且增加features的数量
         self.encoders = nn.ModuleList([
             
@@ -289,18 +282,18 @@ class UNET(nn.Module):
             # * (batch, 1280, height / 64, width / 64) -> same
             SwitchSequential(UNET_ResidualBlock(1280, 1280))
         ])
-        
-        
+
         self.bottleneck = SwitchSequential([
+            # * (batch, 1280, height / 64, width / 64)
             UNET_ResidualBlock(1280, 1280),
             
+            # * (batch, 1280, height / 64, width / 64)
             UNET_AttentionBlock(8 ,160),
             
+            # * (batch, 1280, height / 64, width / 64)
             UNET_ResidualBlock(1280, 1280)
         ])
-        
-        
-        
+
         self.decoder = nn.ModuleList([
             
             
@@ -309,30 +302,43 @@ class UNET(nn.Module):
             # * (batch, 2560, height / 64, width / 64) -> (batch, 1280, height / 64, width / 64)
             SwitchSequential(UNET_ResidualBlock(2560, 1280)),
             
+            # * (batch, 2560, height / 64, width / 64) -> (batch, 1280, height / 64, width / 64)
             SwitchSequential(UNET_ResidualBlock(2560, 1280)),
             
             
             # ! 上采样1
+            # * (batch, 2560, height / 64, width / 64) -> (batch, 1280, height / 64, width / 64) -> (batch, 1280, height / 32, width / 32)
             SwitchSequential(UNET_ResidualBlock(2560, 1280), UpSample(1280)),
             
+            # * 1280 + 1280 = 2560
             SwitchSequential(UNET_ResidualBlock(2560, 1280), UNET_AttentionBlock(8 ,160)),
             
+            # * 1280 + 1280 = 2560
             SwitchSequential(UNET_ResidualBlock(2560, 1280), UNET_AttentionBlock(8 ,160)),
             
             
             # ! 上采样2
+            # * (batch, 1920, height / 32, width / 32) -> (batch, 1280, height / 32, width / 32) -> (batch, 1280, height / 16, width / 16)
+            # * 1280 + 640 = 1920
             SwitchSequential(UNET_ResidualBlock(1920, 1280), UNET_AttentionBlock(8 ,160), UpSample(1280)),
             
+            # * (batch, 1280, height / 16, width / 16) -> (batch, 640, height / 16, width / 16)
+            # * 1280 + 640 = 1920
             SwitchSequential(UNET_ResidualBlock(1920, 640), UNET_AttentionBlock(8 ,80)),
             
+            # * 640 + 640 = 1280
             SwitchSequential(UNET_ResidualBlock(1280, 640), UNET_AttentionBlock(8 ,80)),
             
             
             # ! 上采样3
+            # * (batch, 960, height / 16, width / 16) -> (batch, 640, height / 16, width / 16) -> (batch, 640, height / 8, width / 8)
+            # * 640 + 320 = 960
             SwitchSequential(UNET_ResidualBlock(960, 640), UNET_AttentionBlock(8 ,80), UpSample(640)),
             
+            # * 640 + 320 = 960
             SwitchSequential(UNET_ResidualBlock(960, 320), UNET_AttentionBlock(8 ,40)),
             
+            # * 320 + 320 = 640
             SwitchSequential(UNET_ResidualBlock(640, 320), UNET_AttentionBlock(8 ,40)),
             
             
@@ -340,18 +346,24 @@ class UNET(nn.Module):
             SwitchSequential(UNET_ResidualBlock(640, 320), UNET_AttentionBlock(8 ,40))   
         ])
 
-    def forward(self, x):
-        
-        
-        
+    def forward(self, x, contest_CLIP, time):
+        # * x: (Batch_Size, 4, Height / 8, Width / 8)
+        # * context: (Batch_Size, Seq_Len, Dim)
+        # * time: (1, 1280)
+
+        skip_connections = []
+        for layers in self.encoders:
+            x = layers(x, contest_CLIP, time)
+            skip_connections.append(x)
+
+        x = self.bottleneck(x, contest_CLIP, time)
+
+        for layers in self.decoders:
+            # Since we always concat with the skip connection of the encoder, the number of features increases before being sent to the decoder's layer
+            x = torch.cat((x, skip_connections.pop()), dim=1)
+            x = layers(x, contest_CLIP, time)
 
         return x
-
-
-
-
-
-
 
 
 # * 这是扩散模型的去噪过程
@@ -386,6 +398,3 @@ class Diffusion(nn.Module):
         
 
         return output
-
-
-
