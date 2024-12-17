@@ -1,6 +1,7 @@
 
 # * 大体思路就是将4数之和拆为两数之和进行求解，思路和两数之和完全一致
 # * 时间复杂度从O(n ** 4) -> O(n ** 2)
+# * a + b + c + d = (a + b) + (c + d)
 class Solution(object):
     def fourSumCount(self, nums1, nums2, nums3, nums4):
         """
