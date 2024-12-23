@@ -19,6 +19,7 @@ if __name__ == "__main__":
 
 # * 解法2
 # * 空间复杂度O(1)的解法
+# * 双指针反向填充
 def main():
     str_input = list(input())
     count = 0
