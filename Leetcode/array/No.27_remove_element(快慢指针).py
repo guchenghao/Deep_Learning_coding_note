@@ -49,6 +49,7 @@ class Solution(object):
         """
         # * 快慢指针 (count, i)
         # * 不能使用del函数
+        # * 慢指针count就是更新的位置
         count = 0
         for i in range(len(nums)):
             if nums[i] == val:
