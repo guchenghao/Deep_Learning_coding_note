@@ -8,7 +8,7 @@ def getPrefix_arr(next, mode_str):
     j = 0   # * 前缀末尾
     next[0] = 0
     
-    
+    # * i 表示后缀末尾
     for i in range(1, len(mode_str)):
         while j > 0 and mode_str[i] != mode_str[j]:
             j = next[j - 1]
