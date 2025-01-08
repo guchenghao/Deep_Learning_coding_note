@@ -3,6 +3,7 @@ import torch.nn as nn
 import math
 
 
+# * 从vocabulary映射到Word Vector (Word Embedding)
 class InputEmbeddings(nn.Module):
     """Some Information about InputEmbeddings"""
     def __init__(self, d_model, vocab_size):
@@ -80,7 +81,8 @@ class LayerNormalization(nn.Module):
         
         mean = x.mean(dim=-1, keepdim=True)  # * 保留最后一个维度
         std = x.std(dim=-1, keepdim=True)
-
+        
+        # * 广播机制
         return self.alpha * (x - mean) / (std + self.eps) + self.bias
 
 
@@ -158,3 +160,148 @@ class MultiHeadAttention(nn.Module):
         x = self.o_proj(x)
 
         return x
+
+# * 构建transformer中skip connection功能
+class ResidualConnection(nn.Module):
+    """Some Information about ResidualConnection"""
+    def __init__(self, dropout_rate):
+        super().__init__()
+        
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        self.norm = LayerNormalization()
+        
+
+    def forward(self, x, sublayer):
+
+        return x + self.dropout(sublayer(self.norm(x)))
+
+
+class EncoderBlock(nn.Module):
+    """Some Information about EncoderBlock"""
+    def __init__(self, self_attention_block, feed_forward_block, dropout_rate):
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.feed_forward_block = feed_forward_block
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        self.residual_connections = nn.ModuleList([ResidualConnection(dropout_rate) for _ in range(2)])
+
+    def forward(self, x, src_mask):
+        # * src_mask在encoder的过程中，可以进行padding mask，保证序列长度相同，以及控制注意力的范围
+        
+        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, src_mask))
+        
+        x = self.residual_connections[1](x, self.feed_forward_block)
+
+        return x
+
+
+class Encoder(nn.Module):
+    """Some Information about Encoder"""
+    def __init__(self, layers):
+        # * layers由一组EncoderBlock组成
+        super().__init__()
+        
+        self.layers = layers
+        
+        self.norm = LayerNormalization()
+
+    def forward(self, x, mask):
+        
+        for layer in self.layers:
+            x = layer(x, mask)
+
+        return self.norm(x)
+
+
+class DecoderBlock(nn.Module):
+    """Some Information about DecoderBlock"""
+    def __init__(self, self_attention_block, cross_attention_block, feed_forward_block, dropout_rate):
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.cross_attention_block = cross_attention_block
+        self.feed_forward_block = feed_forward_block
+        
+        self.residual_connections = nn.ModuleList([ResidualConnection(dropout_rate) for _ in range(3)])
+        
+
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
+        # * src_mask作用于encoder，tgt_mask作用于decoder
+        # * 为什么需要这两种mask? 是因为在类似于机器翻译这种任务中源语言与目标语言不一样，需要设计不同的mask
+        
+        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, tgt_mask))
+        
+        x = self.residual_connections[1](x, lambda x: self.cross_attention_block(x, encoder_output, encoder_output, src_mask))
+        
+        x = self.residual_connections[2](x, lambda x: self.feed_forward_block)
+        
+        return x
+
+
+class Decoder(nn.Module):
+    """Some Information about Decoder"""
+    def __init__(self, layers):
+        super().__init__()
+        self.layers = layers
+        self.norm = LayerNormalization()
+
+    def forward(self, x, encoder_output, src_mask, tgt_mask):
+        
+        for layer in self.layers:
+            
+            x = layer(x, encoder_output, src_mask, tgt_mask)
+        
+
+        return self.norm(x)
+
+
+# * 将Decoder的输出从词向量空间映射到vocab空间
+class ProjectionLayer(nn.Module):
+    """Some Information about ProjectionLayer"""
+    def __init__(self, d_model, vocab_size):
+        super().__init__()
+        self.proj = nn.Linear(d_model, vocab_size)
+        
+        
+
+    def forward(self, x):
+        # * x: (batch, seq_len, d_model)
+        
+        # * (batch, seq_len, d_model) -> (batch, seq_len, vocab_size)
+        # * 这里使用log_softmax是为了在训练阶段，数值更加稳定且高效
+        return torch.log_softmax(x, dim=-1)
+
+
+class Transformer(nn.Module):
+    """Some Information about Transformer"""
+    def __init__(self, encoder, decoder, src_embedding, tgt_embedding, src_position, tgt_position, projection_layer):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.src_embedding = src_embedding
+        self.tgt_embedding = tgt_embedding
+        self.src_position = src_position
+        self.tgt_position = tgt_position
+        self.projection_layer = projection_layer
+
+    def encode(self, src, src_mask):
+        src = self.src_embedding(src)
+        src = self.src_position(src)
+
+        return self.encoder(src, src_mask)
+
+
+    def decode(self, encoder_output, src_mask, tgt_mask, tgt):
+        tgt = self.tgt_embedding(tgt)
+        tgt = self.src_position(tgt)
+
+        return self.decoder(tgt, encoder_output, src_mask, tgt_mask)
+    
+    
+    def projection(self, decoder_output):
+        
+        return self.projection_layer(decoder_output)
+    
+    
+    
