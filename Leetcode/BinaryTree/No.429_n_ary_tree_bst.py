@@ -1,19 +1,20 @@
-# Definition for a binary tree node.
-# class TreeNode(object):
-#     def __init__(self, val=0, left=None, right=None):
-#         self.val = val
-#         self.left = left
-#         self.right = right
+"""
+# Definition for a Node.
+class Node(object):
+    def __init__(self, val=None, children=None):
+        self.val = val
+        self.children = children
+"""
+
+
 class Solution(object):
     def levelOrder(self, root):
         """
-        :type root: Optional[TreeNode]
+        :type root: Node
         :rtype: List[List[int]]
         """
         if not root:
             return []
-        
-        # * 利用队列来实现广度优先搜索
         queue_level = collections.deque([root])
 
         result = []
@@ -26,11 +27,8 @@ class Solution(object):
             node = queue_level.popleft()
             temp.append(node.val)
 
-            if node.left:
-                queue_level.append(node.left)
-
-            if node.right:
-                queue_level.append(node.right)
+            if node.children:
+                queue_level.extend(node.children)
 
             if queue_size == 0:
                 result.append(temp)

@@ -5,26 +5,21 @@
 #         self.left = left
 #         self.right = right
 class Solution(object):
-    def levelOrder(self, root):
+    def maxDepth(self, root):
         """
         :type root: Optional[TreeNode]
-        :rtype: List[List[int]]
+        :rtype: int
         """
         if not root:
-            return []
-        
-        # * 利用队列来实现广度优先搜索
+            return 0
         queue_level = collections.deque([root])
 
-        result = []
-        temp = []
-
         queue_size = 1
+        level = 0
 
         while queue_level:
             queue_size -= 1
             node = queue_level.popleft()
-            temp.append(node.val)
 
             if node.left:
                 queue_level.append(node.left)
@@ -33,8 +28,7 @@ class Solution(object):
                 queue_level.append(node.right)
 
             if queue_size == 0:
-                result.append(temp)
-                temp = []
+                level += 1
                 queue_size = len(queue_level)
 
-        return result
+        return level
