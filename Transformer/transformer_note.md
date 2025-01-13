@@ -78,3 +78,154 @@
 ### **总结**
 
 `source mask` 的核心作用是控制 Transformer Encoder 的**注意力范围**，避免模型处理无效或不必要的信息，从而提高模型的效率和性能。它通过调整注意力权重（如填充为负无穷）确保模型专注于有效的输入位置。
+
+
+
+
+## pathlib模块中的Path函数的用法
+
+在 Python 的标准库 `pathlib` 中，`Path` 是一个类，用于处理文件和目录路径。`Path` 提供了一种面向对象的方式来操作文件系统路径，比传统的模块（如 `os` 和 `os.path`）更加直观和强大。
+
+---
+
+### **`Path` 的功能**
+
+`Path` 是 `pathlib` 中的核心类，主要用于以下功能：
+
+1. 表示文件和目录的路径。
+2. 提供方法进行路径操作（如拼接、查询）。
+3. 支持文件系统操作（如创建、删除文件或目录）。
+
+---
+
+### **如何使用 `Path`**
+
+以下是 `Path` 类的主要用途和示例：
+
+#### **1. 导入 `Path` 类**
+
+```python
+from pathlib import Path
+```
+
+---
+
+#### **2. 创建 `Path` 对象**
+
+`Path` 可以用来创建路径对象，无论是文件还是目录。
+
+```python
+# 创建一个路径对象
+p = Path("/path/to/file.txt")
+print(p)  # 输出: /path/to/file.txt
+```
+
+如果路径是相对路径：
+
+```python
+p = Path("file.txt")
+print(p)  # 输出: file.txt
+```
+
+---
+
+#### **3. 路径操作**
+
+- **拼接路径**：
+  可以使用 `/` 操作符拼接路径，而无需使用字符串拼接。
+
+```python
+base = Path("/path/to")
+file = base / "file.txt"
+print(file)  # 输出: /path/to/file.txt
+```
+
+- **访问路径的部分**：
+  提取路径中的不同部分。
+
+```python
+p = Path("/path/to/file.txt")
+print(p.name)       # 输出: file.txt
+print(p.stem)       # 输出: file
+print(p.suffix)     # 输出: .txt
+print(p.parent)     # 输出: /path/to
+```
+
+---
+
+#### **4. 文件系统操作**
+
+`Path` 提供方法来执行文件系统操作，如检查路径是否存在、创建文件或目录等。
+
+- **检查路径**：
+
+```python
+print(p.exists())  # 检查路径是否存在
+print(p.is_file()) # 检查是否是文件
+print(p.is_dir())  # 检查是否是目录
+```
+
+- **创建目录**：
+
+```python
+Path("/path/to/new_dir").mkdir(parents=True, exist_ok=True)
+```
+
+- **读取和写入文件**：
+
+```python
+file = Path("example.txt")
+
+# 写入内容
+file.write_text("Hello, World!")
+
+# 读取内容
+content = file.read_text()
+print(content)  # 输出: Hello, World!
+```
+
+---
+
+#### **5. 遍历目录**
+
+`Path` 提供方便的方法来遍历目录中的文件。
+
+```python
+dir_path = Path("/path/to/directory")
+for file in dir_path.iterdir():
+    print(file)  # 输出目录中的文件和子目录
+
+# 递归遍历
+for file in dir_path.rglob("*.txt"):
+    print(file)  # 输出目录及其子目录中的所有 .txt 文件
+```
+
+---
+
+### **与传统模块的对比**
+
+`Path` 的优点：
+
+1. 面向对象，更直观。
+2. 不再需要频繁使用 `os` 和 `os.path`，减少代码复杂性。
+3. 跨平台支持，避免手动处理路径分隔符问题。
+
+示例对比：
+
+```python
+# os.path 示例
+import os
+path = os.path.join("/path/to", "file.txt")
+print(os.path.basename(path))  # 输出: file.txt
+
+# Path 示例
+from pathlib import Path
+path = Path("/path/to") / "file.txt"
+print(path.name)  # 输出: file.txt
+```
+
+---
+
+### **总结**
+
+`Path` 是 `pathlib` 提供的路径类，用于方便地管理和操作文件系统路径。它提供了强大的功能，能替代传统的 `os` 和 `os.path` 模块，是 Python 3.x 中推荐使用的路径操作方式。

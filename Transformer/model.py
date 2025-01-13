@@ -270,7 +270,7 @@ class ProjectionLayer(nn.Module):
         
         # * (batch, seq_len, d_model) -> (batch, seq_len, vocab_size)
         # * 这里使用log_softmax是为了在训练阶段，数值更加稳定且高效
-        return torch.log_softmax(x, dim=-1)
+        return torch.log_softmax(self.proj(x), dim=-1)
 
 
 class Transformer(nn.Module):
@@ -302,6 +302,57 @@ class Transformer(nn.Module):
     def projection(self, decoder_output):
         
         return self.projection_layer(decoder_output)
+
+
+def build_transformer(src_vocab_size, tgt_vocab_size, src_seq_len, tgt_seq_len, d_model=512, N=6, h=8, dropout_rate=0.1, d_ff=2048):
+
+    # * embedding layer:
+    src_embed = InputEmbeddings(d_model, src_vocab_size)
+    tgt_embed = InputEmbeddings(d_model, tgt_vocab_size)
+
+    # * positional encoding layers
+    src_pos = PostionalEncoding(d_model, src_seq_len, dropout_rate)
+    tgt_pos = PostionalEncoding(d_model, tgt_seq_len, dropout_rate)
+
+
+    # * encoder block
+    encoder_blocks = []
+
+    for _ in range(N):
+        encoder_self_attention_block = MultiHeadAttention(d_model, h, dropout_rate)
+        encoder_feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout_rate)
+        encoder_block = EncoderBlock(encoder_self_attention_block, encoder_feed_forward_block, dropout_rate)
+        encoder_blocks.append(encoder_block)
     
     
+    # * decoder block
+    decoder_blocks = []
+    
+    for _ in range(N):
+        decoder_self_attention_block = MultiHeadAttention(d_model, h, dropout_rate)
+        decoder_cross_attention_block = MultiHeadAttention(d_model, h, dropout_rate)
+        decoder_feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout_rate)
+        
+        decoder_block = DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, decoder_feed_forward_block, dropout_rate)
+        decoder_blocks.append(decoder_block)
+    
+    
+    # * encoder and decoder
+    encoder = Encoder(nn.ModuleList(encoder_blocks))
+    decoder = Decoder(nn.ModuleList(decoder_blocks))
+    
+    
+    # * projection layer
+    projection_layer = ProjectionLayer(d_model, tgt_vocab_size)
+    
+    
+    transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, projection_layer)
+    
+    # * Initial the parameter
+    for p in transformer.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
+    
+    
+    return transformer
     
