@@ -11,6 +11,7 @@ class Solution(object):
         :rtype: Optional[TreeNode]
         """
         # * 前序和后序遍历解题较为简单，不要使用中序遍历解题
+        # * 从上往下交换左右子树
         if not root:
             return root
 

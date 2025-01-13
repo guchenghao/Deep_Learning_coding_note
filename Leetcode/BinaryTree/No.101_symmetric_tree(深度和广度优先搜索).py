@@ -34,6 +34,7 @@ class Solution(object):
 
             bfs_left.append(node_left.left)
             bfs_left.append(node_left.right)
+            # * 因为是判断左右子树是否对称，因此左右子树的队列，节点入队的顺序应该是相反的
             bfs_right.append(node_right.right)
             bfs_right.append(node_right.left)
 
