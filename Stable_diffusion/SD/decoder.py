@@ -52,11 +52,16 @@ class VAE_ResidualBlock(nn.Module):
 
 
 '''
+   # * 归一化层的在CV中的作用: 
    # * Batch Normalization的每次计算是对每个channel的所有batch的所有像素点进行归一化
    # * Layer Normalization的每次计算是对每个图片的所有channel的所有像素点进行归一化
    # * Instance Normalization的每次计算是对每个图片的每个channel的所有像素点进行归一化
    # * Group Normalization的每次计算是对每个图片的每组channel的所有像素点进行归一化
    # * 归一化可以加速模型收敛, 防止loss function剧烈震荡
+   
+   # ! Layer normalization在NLP领域中的使用与CV中有所不同，而且Layer norm在CV中也不常用
+   # ! 在NLP中，Layer norm是对每个batch的每个token进行归一化
+   # ! 在CV中，Layer norm是对每个图片的所有channel进行归一化
 '''
 
 
