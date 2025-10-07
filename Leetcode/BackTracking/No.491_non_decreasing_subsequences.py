@@ -1,4 +1,6 @@
 class Solution(object):
+    # * 回溯法从根本上来说就是一种深度优先搜索
+    # * 这道题和No.90子集2类似, 但是这道题不能排序, 因为排序会改变原数组的相对位置, 影响结果
     def __init__(self):
         self.result = []
         self.path = []
